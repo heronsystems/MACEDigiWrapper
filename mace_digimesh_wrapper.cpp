@@ -5,17 +5,17 @@
 #include <iostream>
 
 
-#define START_BYTE 0x7e;
-#define BROADCAST_ADDRESS = '000000000000ffff';
+#define START_BYTE 0x7e
+#define BROADCAST_ADDRESS = '000000000000ffff'
 // command types
-#define FRAME_AT_COMMAND 0x08;
-#define FRAME_AT_COMMAND_RESPONSE 0x88;
-#define FRAME_REMOTE_AT_COMMAND 0x17;
-#define FRAME_REMOTE_AT_COMMAND_RESPONSE 0x97;
-#define FRAME_MODEM_STATUS 0x8a;
-#define FRAME_TRANSMIT_REQUEST 0x10;
-#define FRAME_TRANSMIT_STATUS 0x8b;
-#define FRAME_RECEIVE_PACKET 0x90;
+#define FRAME_AT_COMMAND 0x08
+#define FRAME_AT_COMMAND_RESPONSE 0x88
+#define FRAME_REMOTE_AT_COMMAND 0x17
+#define FRAME_REMOTE_AT_COMMAND_RESPONSE 0x97
+#define FRAME_MODEM_STATUS 0x8a
+#define FRAME_TRANSMIT_REQUEST 0x10
+#define FRAME_TRANSMIT_STATUS 0x8b
+#define FRAME_RECEIVE_PACKET 0x90
 
 #define CALLBACK_QUEUE_SIZE 256
 
@@ -25,7 +25,7 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const Digi
     m_CurrentFrames = new Frame[CALLBACK_QUEUE_SIZE];
     for(int i = 0 ; i < CALLBACK_QUEUE_SIZE ; i++) {
         m_CurrentFrames[i].inUse = false;
-        m_CurrentFrames[i].callbackEnabled = false;
+        m_CurrentFrames[i].callback = NULL;
     }
     m_PreviousFrame = 0;
 
@@ -39,6 +39,8 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const Digi
 
     m_Link = new SerialLink(config);
     m_Link->Connect();
+
+    m_Link->AddListener(this);
 }
 
 MACEDigiMeshWrapper::~MACEDigiMeshWrapper() {
@@ -108,8 +110,73 @@ int calc_checksum(const char *buf, const size_t start, const size_t end) {
     return (0xff - sum) & 0xff;
 }
 
-void MACEDigiMeshWrapper::GetParameterAsync(const std::string &parameterName, const std::function<void(const std::string &)> &callback, const std::vector<char> &data)
+
+void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer)
 {
+    //add what we received to the current buffer.
+    for(size_t i = 0 ; i < buffer.size() ; i++) {
+        m_CurrBuf.push_back(buffer.at(i));
+    }
+
+
+    //start infinite loop to pick up multiple packets sent at same time
+    while(true) {
+
+        //if there aren't three bytes received we have to wait more
+        if(m_CurrBuf.size() < 3) {
+            break;
+        }
+
+        // add 4 bytes for start, length, and checksum
+        uint8_t packet_length = (m_CurrBuf[1]<<8 |m_CurrBuf[2]) + 4;
+
+        //if we have received part of the packet, but not entire thing then we need to wait longer
+        if(m_CurrBuf.size() < packet_length) {
+            return;
+        }
+
+        //splice m_CurrBuff to just our packet we care about.
+        std::vector<uint8_t> packet(
+            std::make_move_iterator(m_CurrBuf.begin() + 3),
+            std::make_move_iterator(m_CurrBuf.begin() + packet_length));
+        m_CurrBuf.erase(m_CurrBuf.begin(), m_CurrBuf.begin() + packet_length);
+
+        switch(packet[0])
+        {
+            case FRAME_AT_COMMAND_RESPONSE:
+                handle_AT_command_response(packet);
+                break;
+            default:
+                throw std::runtime_error("unknown packet type received: " + packet[0]);
+        }
+
+
+
+    }
+}
+
+void MACEDigiMeshWrapper::CommunicationError(const SerialLink* link_ptr, const std::string &type, const std::string &msg)
+{
+
+}
+
+void MACEDigiMeshWrapper::CommunicationUpdate(const SerialLink *link_ptr, const std::string &name, const std::string &msg)
+{
+
+}
+
+void MACEDigiMeshWrapper::Connected(const SerialLink* link_ptr)
+{
+
+}
+
+void MACEDigiMeshWrapper::ConnectionRemoved(const SerialLink *link_ptr)
+{
+
+}
+
+
+int MACEDigiMeshWrapper::AT_command_helper(const std::string &parameterName, const std::shared_ptr<Callback<std::string>> &callback, const std::vector<char> &data) {
     int frame_id = reserve_next_frame_id();
     if(frame_id == -1) {
         throw std::runtime_error("Queue Full");
@@ -135,51 +202,37 @@ void MACEDigiMeshWrapper::GetParameterAsync(const std::string &parameterName, co
 
     tx_buf[7 + param_len] = calc_checksum(tx_buf, 3, 8 + param_len-1);
 
-    for(int i = 0 ; i < 8 + param_len ; i++) {
-        printf("  %d 0x%x %c\n", tx_buf[i], tx_buf[i], tx_buf[i]);
-    }
-
     //console.log(tx_buf.toString('hex').replace(/(.{2})/g, "$1 "));
     m_Link->MarshalOnThread([this, tx_buf, param_len, frame_id, callback](){
-        m_Link->WriteBytes(tx_buf, 8 + param_len);
-
         m_CurrentFrames[frame_id].callback = callback;
-        m_CurrentFrames[frame_id].callbackEnabled = true;
+        m_Link->WriteBytes(tx_buf, 8 + param_len);
 
         delete[] tx_buf;
     });
-}
 
-void MACEDigiMeshWrapper::SetParameter(const std::string &parameterName, const std::string &value) const
-{
+    return frame_id;
 
 }
 
-void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer) const
-{
-    std::cout << "Receive Data" << std::endl;
-}
+void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> &buf) {
+    uint8_t frame_id = buf[1];
 
-void MACEDigiMeshWrapper::CommunicationError(const SerialLink* link_ptr, const std::string &type, const std::string &msg) const
-{
+    uint8_t status = buf[4];
+    if(status) {
+        //error
+    }
 
-}
+    std::string commandRespondingTo = "";
+    commandRespondingTo.push_back(buf[2]);
+    commandRespondingTo.push_back(buf[3]);
 
-void MACEDigiMeshWrapper::CommunicationUpdate(const SerialLink *link_ptr, const std::string &name, const std::string &msg) const
-{
-
-}
-
-void MACEDigiMeshWrapper::Connected(const SerialLink* link_ptr) const
-{
-
-}
-
-void MACEDigiMeshWrapper::ConnectionRemoved(const SerialLink *link_ptr) const
-{
+    std::string str = "";
+    for(size_t i = 5 ; i < buf.size()-1 ; i++) {
+        str += buf[i];
+    }
+    find_and_invokve_frame<std::string>(frame_id, str);
 
 }
-
 
 int MACEDigiMeshWrapper::reserve_next_frame_id()
 {
@@ -208,4 +261,10 @@ int MACEDigiMeshWrapper::reserve_next_frame_id()
     m_PreviousFrame = framePrediction;
 
     return framePrediction;
+}
+
+
+void MACEDigiMeshWrapper::finish_frame(int frame_id)
+{
+    this->m_CurrentFrames[frame_id].inUse = false;
 }

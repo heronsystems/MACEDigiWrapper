@@ -73,7 +73,7 @@ void SerialLink::RequestReset()
     m_stoppMutex.unlock();
 }
 
-void SerialLink::WriteBytes(const char *bytes, int length) const
+void SerialLink::WriteBytes(const char *bytes, int length)
 {
     QByteArray data(bytes, length);
     if(m_port && m_port->isOpen()) {
@@ -271,7 +271,7 @@ void SerialLink::_readBytes(void)
 
         std::vector<uint8_t> vec_buffer = std::vector<uint8_t>(buffer.begin(), buffer.end());
 
-        EmitEvent([this,&vec_buffer](const ILinkEvents *ptr){ptr->ReceiveData(this, vec_buffer);});
+        EmitEvent([this,&vec_buffer](ILinkEvents *ptr){ptr->ReceiveData(this, vec_buffer);});
     }
 }
 
@@ -281,7 +281,7 @@ void SerialLink::linkError(QSerialPort::SerialPortError error)
     case QSerialPort::NoError:
         break;
     case QSerialPort::ResourceError:
-        EmitEvent([this](const ILinkEvents *ptr){ptr->ConnectionRemoved(this);});
+        EmitEvent([this](ILinkEvents *ptr){ptr->ConnectionRemoved(this);});
         break;
     default:
         // You can use the following qDebug output as needed during development. Make sure to comment it back out
@@ -307,8 +307,8 @@ void SerialLink::PortEventLoop()
     }
 }
 
-void SerialLink::_emitLinkError(const std::string& errorMsg) const
+void SerialLink::_emitLinkError(const std::string& errorMsg)
 {
     std::string msg = "Error on link " + getPortName() + ". " + errorMsg;
-    EmitEvent([&](const ILinkEvents *ptr){ptr->CommunicationError(this, "Link Error", msg);});
+    EmitEvent([&](ILinkEvents *ptr){ptr->CommunicationError(this, "Link Error", msg);});
 }

@@ -20,7 +20,7 @@ class MACEDIGIMESHWRAPPERSHARED_EXPORT SerialLink
 {
 private:
 
-    std::vector<const ILinkEvents*> m_Listeners;
+    std::vector<ILinkEvents*> m_Listeners;
 
 public:
 
@@ -28,9 +28,14 @@ public:
 
     ~SerialLink();
 
-    void EmitEvent(const std::function<void(const ILinkEvents*)> &func) const
+    void AddListener(ILinkEvents* ptr)
     {
-        for(const ILinkEvents* listener : m_Listeners)
+        m_Listeners.push_back(ptr);
+    }
+
+    void EmitEvent(const std::function<void(ILinkEvents*)> &func)
+    {
+        for(ILinkEvents* listener : m_Listeners)
         {
             func(listener);
         }
@@ -38,7 +43,7 @@ public:
 
     virtual void RequestReset();
 
-    virtual void WriteBytes(const char *bytes, int length) const;
+    virtual void WriteBytes(const char *bytes, int length);
 
     //!
     //! \brief Determine the connection status
@@ -49,7 +54,7 @@ public:
 
     std::string getPortName() const;
 
-    void _emitLinkError(const std::string& errorMsg) const;
+    void _emitLinkError(const std::string& errorMsg);
 
     virtual bool Connect(void);
 

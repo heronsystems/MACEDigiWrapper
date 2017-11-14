@@ -8,5 +8,6 @@ SOURCES += main.cpp \
 $$PWD/../*.cpp
 
 HEADERS += $$PWD/../*.h\
+    ../frame_persistence.h
 
 INCLUDEPATH += $$PWD/../

@@ -32,7 +32,8 @@ HEADERS += mace_digimesh_wrapper.h\
     serial_link.h \
     serial_configuration.h \
     serial_configuration.h \
-    i_link_events.h
+    i_link_events.h \
+    frame_persistence.h
 
 unix {
     target.path = /usr/lib
