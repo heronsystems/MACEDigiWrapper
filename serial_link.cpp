@@ -217,7 +217,15 @@ bool SerialLink::_hardwareConnect(QSerialPort::SerialPortError& error, QString& 
 
 
     m_ListenThread = new AppThread(10, [&](){
-        this->PortEventLoop();
+        try
+        {
+            this->PortEventLoop();
+        }
+        catch(std::runtime_error e) {
+            printf("Error: %s\n", e.what());
+            throw e;
+        }
+
     });
     m_port->moveToThread(m_ListenThread);
     m_ListenThread->start();

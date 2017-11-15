@@ -5,27 +5,13 @@
 #include <iostream>
 
 
-#define START_BYTE 0x7e
-#define BROADCAST_ADDRESS = '000000000000ffff'
-// command types
-#define FRAME_AT_COMMAND 0x08
-#define FRAME_AT_COMMAND_RESPONSE 0x88
-#define FRAME_REMOTE_AT_COMMAND 0x17
-#define FRAME_REMOTE_AT_COMMAND_RESPONSE 0x97
-#define FRAME_MODEM_STATUS 0x8a
-#define FRAME_TRANSMIT_REQUEST 0x10
-#define FRAME_TRANSMIT_STATUS 0x8b
-#define FRAME_RECEIVE_PACKET 0x90
-
-#define CALLBACK_QUEUE_SIZE 256
-
 MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const DigiMeshBaudRates &baudRate) :
     m_Link(NULL)
 {
     m_CurrentFrames = new Frame[CALLBACK_QUEUE_SIZE];
     for(int i = 0 ; i < CALLBACK_QUEUE_SIZE ; i++) {
         m_CurrentFrames[i].inUse = false;
-        m_CurrentFrames[i].callback = NULL;
+        m_CurrentFrames[i].framePersistance = FramePersistanceBehavior();
     }
     m_PreviousFrame = 0;
 
@@ -102,14 +88,6 @@ void MACEDigiMeshWrapper::SendData(const int vechileID, const std::vector<uint8_
 
 }
 
-int calc_checksum(const char *buf, const size_t start, const size_t end) {
-    size_t sum = 0;
-    for (size_t i = start; i < end; i++) {
-        sum += buf[i];
-    }
-    return (0xff - sum) & 0xff;
-}
-
 
 void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer)
 {
@@ -138,13 +116,21 @@ void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<ui
         //splice m_CurrBuff to just our packet we care about.
         std::vector<uint8_t> packet(
             std::make_move_iterator(m_CurrBuf.begin() + 3),
-            std::make_move_iterator(m_CurrBuf.begin() + packet_length));
+            std::make_move_iterator(m_CurrBuf.begin() + packet_length - 1));
         m_CurrBuf.erase(m_CurrBuf.begin(), m_CurrBuf.begin() + packet_length);
 
         switch(packet[0])
         {
             case FRAME_AT_COMMAND_RESPONSE:
                 handle_AT_command_response(packet);
+                break;
+            case FRAME_REMOTE_AT_COMMAND_RESPONSE:
+                break;
+            case FRAME_MODEM_STATUS:
+                break;
+            case FRAME_TRANSMIT_STATUS:
+                break;
+            case FRAME_RECEIVE_PACKET:
                 break;
             default:
                 throw std::runtime_error("unknown packet type received: " + packet[0]);
@@ -176,45 +162,8 @@ void MACEDigiMeshWrapper::ConnectionRemoved(const SerialLink *link_ptr)
 }
 
 
-int MACEDigiMeshWrapper::AT_command_helper(const std::string &parameterName, const std::shared_ptr<Callback<std::string>> &callback, const std::vector<char> &data) {
-    int frame_id = reserve_next_frame_id();
-    if(frame_id == -1) {
-        throw std::runtime_error("Queue Full");
-    }
-
-    size_t param_len = data.size();
-
-    char *tx_buf = new char[8 + param_len];
-    tx_buf[0] = START_BYTE;
-    tx_buf[1] = (0x04 + param_len) >> 8;
-    tx_buf[2] = (0x04 + param_len) & 0xff;
-    tx_buf[3] = FRAME_AT_COMMAND;
-    tx_buf[4] = frame_id;
-    tx_buf[5] = parameterName[0];
-    tx_buf[6] = parameterName[1];
-
-    // if we have a parameter, copy it over
-    if (param_len > 0) {
-        for(size_t i = 0 ; i < param_len ; i++) {
-            tx_buf[7 + i] = data[i];
-        }
-    }
-
-    tx_buf[7 + param_len] = calc_checksum(tx_buf, 3, 8 + param_len-1);
-
-    //console.log(tx_buf.toString('hex').replace(/(.{2})/g, "$1 "));
-    m_Link->MarshalOnThread([this, tx_buf, param_len, frame_id, callback](){
-        m_CurrentFrames[frame_id].callback = callback;
-        m_Link->WriteBytes(tx_buf, 8 + param_len);
-
-        delete[] tx_buf;
-    });
-
-    return frame_id;
-
-}
-
 void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> &buf) {
+    printf("Receive: %x\n", this);
     uint8_t frame_id = buf[1];
 
     uint8_t status = buf[4];
@@ -226,11 +175,18 @@ void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> 
     commandRespondingTo.push_back(buf[2]);
     commandRespondingTo.push_back(buf[3]);
 
+    /*
     std::string str = "";
     for(size_t i = 5 ; i < buf.size()-1 ; i++) {
         str += buf[i];
     }
-    find_and_invokve_frame<std::string>(frame_id, str);
+    */
+
+    std::vector<uint8_t> packet(
+        std::make_move_iterator(buf.begin() + 5),
+        std::make_move_iterator(buf.end()));
+
+    find_and_invokve_frame(frame_id, packet);
 
 }
 

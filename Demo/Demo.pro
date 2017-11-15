@@ -8,6 +8,12 @@ SOURCES += main.cpp \
 $$PWD/../*.cpp
 
 HEADERS += $$PWD/../*.h\
-    ../frame_persistence.h
+    ../ATData/I_AT_data.h \
+    ../ATData/integer.h \
+    ../ATData/string.h \
+    ../math_helper.h \
+    ../ATData/node_discovery.h \
+    ../frame_persistence_types.h \
+    ../frame_persistence_behavior.h
 
 INCLUDEPATH += $$PWD/../

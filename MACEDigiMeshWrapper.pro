@@ -24,7 +24,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += mace_digimesh_wrapper.cpp \
-    serial_link.cpp
+    serial_link.cpp \
 
 HEADERS += mace_digimesh_wrapper.h\
         macedigimeshwrapper_global.h \
@@ -33,7 +33,12 @@ HEADERS += mace_digimesh_wrapper.h\
     serial_configuration.h \
     serial_configuration.h \
     i_link_events.h \
-    frame_persistence.h
+    frame_persistence.h \
+    timer.h \
+    ATData/string.h \
+    ATData/I_AT_data.h \
+    ATData/integer.h \
+    ATData/node.h
 
 unix {
     target.path = /usr/lib

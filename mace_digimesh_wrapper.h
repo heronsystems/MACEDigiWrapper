@@ -11,42 +11,29 @@
 
 #include "i_link_events.h"
 
-#include "frame_persistence.h"
+#include "frame_persistence_types.h"
+#include "frame_persistence_behavior.h"
 
-class ICallback {
-public:
-    virtual bool IsSet() const = 0;
-};
+#include "ATData/index.h"
 
-template <typename T>
-class Callback : public ICallback {
-public:
-    Callback() {
-        m_Func = NULL;
-    }
-
-    Callback(const std::function<void(int, const T&)> &func) {
-        m_Func = new std::function<void(int, const T&)>(func);
-    }
-
-    ~Callback() {
-        delete m_Func;
-    }
-
-    void Call(int frame_id, const T &data) {
-        (*m_Func)(frame_id, data);
-    }
-
-    virtual bool IsSet() const {
-        if(m_Func == NULL) {
-            return false;
-        }
-        return true;
-    }
+#include "math_helper.h"
+#include "frame_persistence_behavior.h"
+#include "callback.h"
 
 
-    std::function<void(int, const T&)> *m_Func;
-};
+#define START_BYTE 0x7e
+#define BROADCAST_ADDRESS = '000000000000ffff'
+// command types
+#define FRAME_AT_COMMAND 0x08
+#define FRAME_AT_COMMAND_RESPONSE 0x88
+#define FRAME_REMOTE_AT_COMMAND 0x17
+#define FRAME_REMOTE_AT_COMMAND_RESPONSE 0x97
+#define FRAME_MODEM_STATUS 0x8a
+#define FRAME_TRANSMIT_REQUEST 0x10
+#define FRAME_TRANSMIT_STATUS 0x8b
+#define FRAME_RECEIVE_PACKET 0x90
+
+#define CALLBACK_QUEUE_SIZE 256
 
 
 class MACEDIGIMESHWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : private ILinkEvents
@@ -54,7 +41,7 @@ class MACEDIGIMESHWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : private ILinkEvents
 private:
 
     struct Frame{
-        std::shared_ptr <ICallback> callback;
+        FramePersistanceBehavior framePersistance;
         bool inUse;
     };
 
@@ -118,22 +105,15 @@ public:
     void SendData(const int vechileID, const std::vector<uint8_t> &data);
 
 
-    template <typename T>
-    void GetATParameterAsync(const std::string &parameterName, const std::function<void(const std::vector<T> &)> &callback, IFramePersistence &persistance)
+    template <typename T, typename P>
+    void GetATParameterAsync(const std::string &parameterName, const std::function<void(const std::vector<T> &)> &callback, const P &persistance)
     {
-        std::shared_ptr<std::vector<T>> vec = std::make_shared<std::vector<T>>();
+        static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
-        std::shared_ptr<Callback<T>> cb = std::make_shared<Callback<T>>([this, callback, vec, &persistance](int frame_id, const T &data) {
-            vec->push_back(data);
-            persistance.FrameReturned();
-        });
+        FramePersistanceBehavior frameBehavior(persistance);
+        frameBehavior.setCallback<T>(callback);
 
-        int frame_id = AT_command_helper(parameterName, cb);
-
-        persistance.AddEndEvent([this, vec, frame_id, callback](){
-           finish_frame(frame_id);
-           callback(*vec);
-        });
+        int frame_id = AT_command_helper(parameterName, frameBehavior);
     }
 
 
@@ -144,17 +124,32 @@ public:
 
 
     template <typename T>
-    void SetATParameterAsync(const std::string &parameterName, const std::string &value, const std::function<void(const std::vector<T> &)> &callback = [](const std::vector<T> &){})
+    void SetATParameterAsync(const std::string &parameterName, const T &value)
     {
-        std::shared_ptr<Callback<T>> cb = std::make_shared<Callback<T>>([this, callback](int frame_id, const T &data) {
+        static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
+
+        SetATParameterAsync<T, ATData::Void>(parameterName, value, [](const std::vector<ATData::Void>&){});
+    }
+
+
+    template <typename T, typename RT>
+    void SetATParameterAsync(const std::string &parameterName, const T &value, const std::function<void(const std::vector<RT> &)> &callback)
+    {
+        static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
+
+        std::vector<uint8_t> data = value.Serialize();
+
+        std::shared_ptr<Callback<RT>> cb = std::make_shared<Callback<RT>>([this, callback](int frame_id, const RT &data) {
             finish_frame(frame_id);
-            std::vector<T> vec;
+            std::vector<RT> vec;
             vec.push_back(data);
             callback(vec);
         });
-        std::vector<char> data(value.c_str(), value.c_str() + value.length() + 1);
+
         AT_command_helper(parameterName, cb, data);
     }
+
+
 
 private:
 
@@ -170,17 +165,52 @@ private:
 
 private:
 
-    int AT_command_helper(const std::string &parameterName, const std::shared_ptr<Callback<std::string>> &callback, const std::vector<char> &data = {});
+    int AT_command_helper(const std::string &parameterName, const FramePersistanceBehavior &frameBehavior, const std::vector<uint8_t> &data = {})
+    {
+        int frame_id = reserve_next_frame_id();
+        if(frame_id == -1) {
+            throw std::runtime_error("Queue Full");
+        }
+
+        size_t param_len = data.size();
+
+        char *tx_buf = new char[8 + param_len];
+        tx_buf[0] = START_BYTE;
+        tx_buf[1] = (0x04 + param_len) >> 8;
+        tx_buf[2] = (0x04 + param_len) & 0xff;
+        tx_buf[3] = FRAME_AT_COMMAND;
+        tx_buf[4] = frame_id;
+        tx_buf[5] = parameterName[0];
+        tx_buf[6] = parameterName[1];
+
+        // if we have a parameter, copy it over
+        if (param_len > 0) {
+            for(size_t i = 0 ; i < param_len ; i++) {
+                tx_buf[7 + i] = data[i];
+            }
+        }
+
+        tx_buf[7 + param_len] = MathHelper::calc_checksum(tx_buf, 3, 8 + param_len-1);
+
+        //console.log(tx_buf.toString('hex').replace(/(.{2})/g, "$1 "));
+        m_Link->MarshalOnThread([this, tx_buf, param_len, frame_id, frameBehavior](){
+            m_CurrentFrames[frame_id].framePersistance = frameBehavior;
+            m_Link->WriteBytes(tx_buf, 8 + param_len);
+
+            delete[] tx_buf;
+        });
+
+        return frame_id;
+    }
 
     void handle_AT_command_response(const std::vector<uint8_t> &buff);
 
     int reserve_next_frame_id();
 
-    template<typename T>
-    void find_and_invokve_frame(int frame_id, const T &data)
+    void find_and_invokve_frame(int frame_id, const std::vector<uint8_t> &data)
     {
-        if(this->m_CurrentFrames[frame_id].callback != NULL && this->m_CurrentFrames[frame_id].callback->IsSet() == true) {
-            ((Callback<T>*)this->m_CurrentFrames[frame_id].callback.get())->Call(frame_id, data);
+        if(this->m_CurrentFrames[frame_id].framePersistance.HasCallback() == true) {
+            this->m_CurrentFrames[frame_id].framePersistance.AddFrameReturn(frame_id, data);
         }
     }
 
