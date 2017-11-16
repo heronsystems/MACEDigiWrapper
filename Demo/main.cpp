@@ -11,18 +11,17 @@ int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
 
-    MACEDigiMeshWrapper wrapper("COM4", DigiMeshBaudRates::Baud9600);
-    MACEDigiMeshWrapper wrapper2("COM5", DigiMeshBaudRates::Baud9600);
-
-    printf("%x %x\n", &wrapper, &wrapper2);
-
-
-   // wrapper.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(2));
-   // wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(2));
+    MACEDigiMeshWrapper wrapper("COM3", DigiMeshBaudRates::Baud9600);
+    MACEDigiMeshWrapper wrapper2("COM4", DigiMeshBaudRates::Baud9600);
 
 
 
-    //wrapper.SetATParameterAsync<ATData::String>("NI", "A");
+    wrapper.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+
+
+    /*
+    wrapper.SetATParameterAsync<ATData::String>("NI", "AA");
     wrapper.GetATParameterAsync<ATData::String>("NI", [](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
             printf("COM4 Ni: %s\n", a[0].c_str());
@@ -32,19 +31,17 @@ int main(int argc, char *argv[])
 
 
 
-    //wrapper2.SetATParameterAsync<ATData::String>("NI", "B");
+    wrapper2.SetATParameterAsync<ATData::String>("NI", "BB");
     wrapper2.GetATParameterAsync<ATData::String>("NI", [](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
             printf("COM5 Ni: %s\n", a[0].c_str());
         }
     }, ShutdownFirstResponse());
+    */
 
 
 
-
-    /*
-    CollectAfterTimeout timeout(15000);
-    wrapper.GetATParameterAsync<ATData::NodeDiscovery>("ND", [](const std::vector<ATData::NodeDiscovery> &a){
+    wrapper2.GetATParameterAsync<ATData::NodeDiscovery>("ND", [](const std::vector<ATData::NodeDiscovery> &a){
         printf("Node Discovery done!\n");
         for(size_t i = 0 ; i < a.size() ; i++) {
             ATData::NodeDiscovery node = a.at(i);
@@ -56,8 +53,8 @@ int main(int argc, char *argv[])
             printf("  manufacturer id: 0x%x\n", node.manufacturer_id);
             printf("  profile id:      0x%x\n", node.profile_id);
         }
-    }, timeout);
-    */
+    }, CollectAfterTimeout(15000));
+
 
 
     while(true) {

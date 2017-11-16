@@ -39,7 +39,7 @@ class MACEDIGIMESHWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : private ILinkEvents
 private:
 
     struct Frame{
-        FramePersistanceBehavior<> framePersistance;
+        std::shared_ptr<FramePersistanceBehavior<>> framePersistance;
         bool inUse;
     };
 
@@ -108,8 +108,8 @@ public:
     {
         static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
-        FramePersistanceBehavior<P> frameBehavior(persistance);
-        ((FramePersistanceBehavior<>)frameBehavior).setCallback<T>(callback);
+        std::shared_ptr<FramePersistanceBehavior<P>> frameBehavior = std::make_shared<FramePersistanceBehavior<P>>(persistance);
+        ((FramePersistanceBehavior<>*)frameBehavior.get())->setCallback<T>(callback);
 
         int frame_id = AT_command_helper(parameterName, frameBehavior);
     }
@@ -135,16 +135,12 @@ public:
     {
         static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
+        std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> frameBehavior = std::make_shared<FramePersistanceBehavior<ShutdownFirstResponse>>(ShutdownFirstResponse());
+        ((FramePersistanceBehavior<>*)frameBehavior.get())->setCallback<RT>(callback);
+
         std::vector<uint8_t> data = value.Serialize();
 
-        std::shared_ptr<Callback<RT>> cb = std::make_shared<Callback<RT>>([this, callback](int frame_id, const RT &data) {
-            finish_frame(frame_id);
-            std::vector<RT> vec;
-            vec.push_back(data);
-            callback(vec);
-        });
-
-        AT_command_helper(parameterName, cb, data);
+        AT_command_helper(parameterName, frameBehavior, data);
     }
 
 
@@ -163,7 +159,7 @@ private:
 
 private:
 
-    int AT_command_helper(const std::string &parameterName, const FramePersistanceBehavior<> &frameBehavior, const std::vector<uint8_t> &data = {})
+    int AT_command_helper(const std::string &parameterName, const std::shared_ptr<FramePersistanceBehavior<>> &frameBehavior, const std::vector<uint8_t> &data = {})
     {
         int frame_id = reserve_next_frame_id();
         if(frame_id == -1) {
@@ -207,8 +203,8 @@ private:
 
     void find_and_invokve_frame(int frame_id, const std::vector<uint8_t> &data)
     {
-        if(this->m_CurrentFrames[frame_id].framePersistance.HasCallback() == true) {
-            this->m_CurrentFrames[frame_id].framePersistance.AddFrameReturn(frame_id, data);
+        if(this->m_CurrentFrames[frame_id].framePersistance->HasCallback() == true) {
+            this->m_CurrentFrames[frame_id].framePersistance->AddFrameReturn(frame_id, data);
         }
     }
 

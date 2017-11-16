@@ -5,6 +5,10 @@ class CollectAfterTimeout
 {
 public:
 
+    CollectAfterTimeout(int numMS){
+        this->numMS = numMS;
+    }
+
     int numMS;
 
 };

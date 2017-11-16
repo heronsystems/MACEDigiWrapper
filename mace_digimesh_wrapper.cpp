@@ -162,7 +162,6 @@ void MACEDigiMeshWrapper::ConnectionRemoved(const SerialLink *link_ptr)
 
 
 void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> &buf) {
-    printf("Receive: %x\n", this);
     uint8_t frame_id = buf[1];
 
     uint8_t status = buf[4];

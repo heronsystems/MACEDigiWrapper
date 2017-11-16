@@ -14,7 +14,16 @@ class FramePersistanceBehavior<ShutdownFirstResponse, Rest...> : public FramePer
 public:
 
     FramePersistanceBehavior(const ShutdownFirstResponse &params) {
+    }
 
+    void Test() {
+
+    }
+
+
+    virtual void FrameReceived()
+    {
+        FramePersistanceBehavior<Rest...>::SendAndFinish();
     }
 };
 
