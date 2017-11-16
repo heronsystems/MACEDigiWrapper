@@ -11,13 +11,11 @@
 
 #include "i_link_events.h"
 
-#include "frame_persistence_types.h"
-#include "frame_persistence_behavior.h"
+#include "frame-persistance/behaviors/index.h"
 
 #include "ATData/index.h"
 
 #include "math_helper.h"
-#include "frame_persistence_behavior.h"
 #include "callback.h"
 
 
@@ -41,7 +39,7 @@ class MACEDIGIMESHWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : private ILinkEvents
 private:
 
     struct Frame{
-        FramePersistanceBehavior framePersistance;
+        FramePersistanceBehavior<> framePersistance;
         bool inUse;
     };
 
@@ -110,8 +108,8 @@ public:
     {
         static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
-        FramePersistanceBehavior frameBehavior(persistance);
-        frameBehavior.setCallback<T>(callback);
+        FramePersistanceBehavior<P> frameBehavior(persistance);
+        ((FramePersistanceBehavior<>)frameBehavior).setCallback<T>(callback);
 
         int frame_id = AT_command_helper(parameterName, frameBehavior);
     }
@@ -165,7 +163,7 @@ private:
 
 private:
 
-    int AT_command_helper(const std::string &parameterName, const FramePersistanceBehavior &frameBehavior, const std::vector<uint8_t> &data = {})
+    int AT_command_helper(const std::string &parameterName, const FramePersistanceBehavior<> &frameBehavior, const std::vector<uint8_t> &data = {})
     {
         int frame_id = reserve_next_frame_id();
         if(frame_id == -1) {

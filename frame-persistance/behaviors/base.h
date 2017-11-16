@@ -1,31 +1,21 @@
-#ifndef FRAME_PERSISTENCE_BEHAVIOR_H
-#define FRAME_PERSISTENCE_BEHAVIOR_H
+#ifndef BEHAVIOR_H
+#define BEHAVIOR_H
 
-#include "frame_persistence_types.h"
-#include "callback.h"
+#include "../../callback.h"
 
-#include <functional>
-#include <vector>
+#include "../types/shutdown-first-response.h"
 
-class FramePersistanceBehavior
+template <typename ...T>
+class FramePersistanceBehavior;
+
+
+template <>
+class FramePersistanceBehavior<>
 {
     ICallback *m_Callback;
 
 public:
 
-    FramePersistanceBehavior() :
-        FramePersistanceBehavior(ResponseBack())
-    {
-
-    }
-
-    FramePersistanceBehavior(const ResponseBack &obj) {
-
-    }
-
-    FramePersistanceBehavior(const CollectAfterTimeout &obj) {
-
-    }
 
     bool HasCallback() const {
         if(m_Callback == NULL) {
@@ -35,7 +25,7 @@ public:
     }
 
     void AddFrameReturn(int frame_id, const std::vector<uint8_t> &data) {
-
+        m_Callback->Call(frame_id, data);
     }
 
     template <typename T>
@@ -49,4 +39,4 @@ public:
     }
 };
 
-#endif // FRAME_PERSISTENCE_BEHAVIOR_H
+#endif // BEHAVIOR_H

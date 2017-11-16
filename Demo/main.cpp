@@ -5,6 +5,8 @@
 
 #include "ATData/index.h"
 
+#include "frame-persistance/types/index.h"
+
 int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
@@ -14,8 +16,6 @@ int main(int argc, char *argv[])
 
     printf("%x %x\n", &wrapper, &wrapper2);
 
-
-    ResponseBack response;
 
    // wrapper.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(2));
    // wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(2));
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
         if(a.size() > 0) {
             printf("COM4 Ni: %s\n", a[0].c_str());
         }
-    }, response);
+    }, ShutdownFirstResponse());
 
 
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         if(a.size() > 0) {
             printf("COM5 Ni: %s\n", a[0].c_str());
         }
-    }, response);
+    }, ShutdownFirstResponse());
 
 
 

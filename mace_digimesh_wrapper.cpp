@@ -11,7 +11,6 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const Digi
     m_CurrentFrames = new Frame[CALLBACK_QUEUE_SIZE];
     for(int i = 0 ; i < CALLBACK_QUEUE_SIZE ; i++) {
         m_CurrentFrames[i].inUse = false;
-        m_CurrentFrames[i].framePersistance = FramePersistanceBehavior();
     }
     m_PreviousFrame = 0;
 
