@@ -20,7 +20,7 @@
 
 
 #define START_BYTE 0x7e
-#define BROADCAST_ADDRESS = '000000000000ffff'
+#define BROADCAST_ADDRESS 0x000000000000ffff
 // command types
 #define FRAME_AT_COMMAND 0x08
 #define FRAME_AT_COMMAND_RESPONSE 0x88
@@ -57,6 +57,8 @@ private:
 
     std::vector<uint8_t> m_CurrBuf;
 
+    std::vector<std::function<void(const ATData::Message&)>> m_MessageHandlers;
+
 public:
     MACEDigiMeshWrapper(const std::string &commPort, const DigiMeshBaudRates &baudRate);
 
@@ -76,6 +78,11 @@ public:
      * @param func Function to call upon new data
      */
     void SetNewDataCallback(std::function<void(const std::vector<uint8_t> &)> func);
+
+    void AddMessageHandler(const std::function<void(const ATData::Message&)> &lambda)
+    {
+        m_MessageHandlers.push_back(lambda);
+    }
 
 
     /**
@@ -143,6 +150,42 @@ public:
         AT_command_helper(parameterName, frameBehavior, data);
     }
 
+    void SendMessage(const std::vector<uint8_t> &data)
+    {
+        SendMessage(data, BROADCAST_ADDRESS);
+    }
+
+    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr)
+    {
+        int packet_length = 14 + data.size();
+        int total_length = packet_length+4;
+        char *tx_buf = new char[total_length];
+        int frame_id = reserve_next_frame_id();
+
+        tx_buf[0] = START_BYTE;
+        tx_buf[1] = (packet_length >> 8) & 0xFF;
+        tx_buf[2] = packet_length & 0xFF;
+        tx_buf[3] = FRAME_TRANSMIT_REQUEST;
+        tx_buf[4] = frame_id;
+        for(size_t i = 0 ; i < 8 ; i++) {
+            uint64_t a = (addr & (0xFFll << (8*(7-i)))) >> (8*(7-i));
+            tx_buf[5+i] = (char)a;
+        }
+        tx_buf[13] = 0xFF;
+        tx_buf[14] = 0xFe;
+        tx_buf[15] = 0x00;
+        tx_buf[16] = 0x00;
+        for(size_t i = 0 ; i < data.size() ; i++) {
+            tx_buf[17+i] = data.at(i);
+        }
+        tx_buf[total_length-1] = MathHelper::calc_checksum(tx_buf, 3, total_length-2);
+        m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id](){
+            m_Link->WriteBytes(tx_buf, total_length);
+
+            delete[] tx_buf;
+        });
+    }
+
 
 
 private:
@@ -199,6 +242,8 @@ private:
 
     void handle_AT_command_response(const std::vector<uint8_t> &buff);
 
+    void handle_receive_packet(const std::vector<uint8_t> &);
+
     int reserve_next_frame_id();
 
     void find_and_invokve_frame(int frame_id, const std::vector<uint8_t> &data)
@@ -207,6 +252,7 @@ private:
             this->m_CurrentFrames[frame_id].framePersistance->AddFrameReturn(frame_id, data);
         }
     }
+
 
     void finish_frame(int frame_id);
 

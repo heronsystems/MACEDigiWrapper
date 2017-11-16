@@ -11,24 +11,35 @@ int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
 
-    MACEDigiMeshWrapper wrapper("COM3", DigiMeshBaudRates::Baud9600);
-    MACEDigiMeshWrapper wrapper2("COM4", DigiMeshBaudRates::Baud9600);
+    const char* RADIO1 = "COM3";
+    const char* RADIO2 = "COM4";
+
+    MACEDigiMeshWrapper wrapper1(RADIO1, DigiMeshBaudRates::Baud9600);
+    MACEDigiMeshWrapper wrapper2(RADIO2, DigiMeshBaudRates::Baud9600);
 
 
+    wrapper2.AddMessageHandler([RADIO2](const ATData::Message &data)
+    {
+        printf("%s received message:\n", RADIO2);
+        printf("  From: %llx\n", data.addr);
+        printf("  Broadcast: %s\n", data.broadcast?"true":"false");
+        printf("  Data:\n", data.broadcast);
+        for(size_t i = 0 ; i < data.data.size() ; i++) {
+            printf("      %c %3d %2x\n", data.data[i], data.data[i], data.data[i]);
+        }
+    });
 
-    wrapper.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
-    wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    //wrapper1.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    //wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
 
 
     /*
-    wrapper.SetATParameterAsync<ATData::String>("NI", "AA");
+    wrapper1.SetATParameterAsync<ATData::String>("NI", "AA");
     wrapper.GetATParameterAsync<ATData::String>("NI", [](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
             printf("COM4 Ni: %s\n", a[0].c_str());
         }
     }, ShutdownFirstResponse());
-
-
 
 
     wrapper2.SetATParameterAsync<ATData::String>("NI", "BB");
@@ -37,7 +48,6 @@ int main(int argc, char *argv[])
             printf("COM5 Ni: %s\n", a[0].c_str());
         }
     }, ShutdownFirstResponse());
-    */
 
 
 
@@ -54,8 +64,10 @@ int main(int argc, char *argv[])
             printf("  profile id:      0x%x\n", node.profile_id);
         }
     }, CollectAfterTimeout(15000));
+    */
 
-
+    auto message = (ATData::String("Hi")).Serialize();
+    wrapper1.SendMessage(message);
 
     while(true) {
 

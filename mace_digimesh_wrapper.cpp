@@ -130,6 +130,7 @@ void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<ui
             case FRAME_TRANSMIT_STATUS:
                 break;
             case FRAME_RECEIVE_PACKET:
+                handle_receive_packet(packet);
                 break;
             default:
                 throw std::runtime_error("unknown packet type received: " + packet[0]);
@@ -186,6 +187,15 @@ void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> 
 
     find_and_invokve_frame(frame_id, packet);
 
+}
+
+void MACEDigiMeshWrapper::handle_receive_packet(const std::vector<uint8_t> &data)
+{
+    ATData::Message msg(data);
+
+    for(int i = 0 ; i < m_MessageHandlers.size() ; i++) {
+        m_MessageHandlers.at(i)(msg);
+    }
 }
 
 int MACEDigiMeshWrapper::reserve_next_frame_id()

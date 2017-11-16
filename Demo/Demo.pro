@@ -38,6 +38,7 @@ HEADERS += $$PWD/../*.h\
     ../math_helper.h \
     ../serial_configuration.h \
     ../serial_link.h \
-    ../timer.h
+    ../timer.h \
+    ../ATData/message.h
 
 INCLUDEPATH += $$PWD/../
