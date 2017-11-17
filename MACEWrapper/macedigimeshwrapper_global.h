@@ -3,12 +3,12 @@
 
 #ifdef _MSC_VER
 #if defined(MACEDIGIMESHWRAPPER_LIBRARY)
-#  define MACEDIGIMESHWRAPPERSHARED_EXPORT __declspec(dllexport)
+#  define DIGIMESHSHARED_EXPORT __declspec(dllexport)
 #else
-#  define MACEDIGIMESHWRAPPERSHARED_EXPORT __declspec(dllimport)
+#  define DIGIMESHSHARED_EXPORT __declspec(dllimport)
 #endif
 #else
-#  define MACEDIGIMESHWRAPPERSHARED_EXPORT
+#  define DIGIMESHSHARED_EXPORT
 #endif
 
 #endif // MACEDIGIMESHWRAPPER_GLOBAL_H

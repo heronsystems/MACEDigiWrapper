@@ -1,7 +1,7 @@
 #ifndef SERIALCONFIGURATION_H
 #define SERIALCONFIGURATION_H
 
-#include "macedigimeshwrapper_global.h"
+#include "DigiMesh_global.h"
 #include <QSerialPort>
 #include <QStringList>
 #include <string>
@@ -9,7 +9,7 @@
 #include "digi_mesh_baud_rates.h"
 
 
-class MACEDIGIMESHWRAPPERSHARED_EXPORT SerialConfiguration
+class DIGIMESHSHARED_EXPORT SerialConfiguration
 {
 
 public:

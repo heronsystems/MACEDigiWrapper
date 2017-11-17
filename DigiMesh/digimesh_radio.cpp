@@ -1,11 +1,11 @@
-#include "mace_digimesh_wrapper.h"
+#include "digimesh_radio.h"
 
 #include "serial_configuration.h"
 
 #include <iostream>
 
 
-MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const DigiMeshBaudRates &baudRate) :
+DigiMeshRadio::DigiMeshRadio(const std::string &commPort, const DigiMeshBaudRates &baudRate) :
     m_Link(NULL)
 {
     m_CurrentFrames = new Frame[CALLBACK_QUEUE_SIZE];
@@ -28,7 +28,7 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &commPort, const Digi
     m_Link->AddListener(this);
 }
 
-MACEDigiMeshWrapper::~MACEDigiMeshWrapper() {
+DigiMeshRadio::~DigiMeshRadio() {
     delete[] m_CurrentFrames;
 }
 
@@ -37,7 +37,7 @@ MACEDigiMeshWrapper::~MACEDigiMeshWrapper() {
  * Set lambda to be called when a new vehicle is discovered by DigiMesh
  * @param func lambda to call.
  */
-void MACEDigiMeshWrapper::SetOnNewVehicleCallback(std::function<void(const int)> func)
+void DigiMeshRadio::SetOnNewVehicleCallback(std::function<void(const int)> func)
 {
     this->m_NewVehicleCallback = func;
 }
@@ -48,7 +48,7 @@ void MACEDigiMeshWrapper::SetOnNewVehicleCallback(std::function<void(const int)>
  * Set callback to be notified when new data has been transmitted to this node
  * @param func Function to call upon new data
  */
-void MACEDigiMeshWrapper::SetNewDataCallback(std::function<void(const std::vector<uint8_t> &)> func)
+void DigiMeshRadio::SetNewDataCallback(std::function<void(const std::vector<uint8_t> &)> func)
 {
     this->m_NewDataCallback = func;
 }
@@ -59,7 +59,7 @@ void MACEDigiMeshWrapper::SetNewDataCallback(std::function<void(const std::vecto
  * Add a vehicle to the DigiMesh network.
  * @param ID Unique Identifier of vehicle
  */
-void MACEDigiMeshWrapper::AddVehicle(const int ID)
+void DigiMeshRadio::AddVehicle(const int ID)
 {
 
 }
@@ -70,7 +70,7 @@ void MACEDigiMeshWrapper::AddVehicle(const int ID)
  * Broadcast data to all nodes on network
  * @param data
  */
-void MACEDigiMeshWrapper::BroadcastData(const std::vector<uint8_t> &data)
+void DigiMeshRadio::BroadcastData(const std::vector<uint8_t> &data)
 {
 
 }
@@ -82,13 +82,13 @@ void MACEDigiMeshWrapper::BroadcastData(const std::vector<uint8_t> &data)
  * @param vechileID
  * @param data
  */
-void MACEDigiMeshWrapper::SendData(const int vechileID, const std::vector<uint8_t> &data)
+void DigiMeshRadio::SendData(const int vechileID, const std::vector<uint8_t> &data)
 {
 
 }
 
 
-void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer)
+void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer)
 {
     //add what we received to the current buffer.
     for(size_t i = 0 ; i < buffer.size() ; i++) {
@@ -141,28 +141,28 @@ void MACEDigiMeshWrapper::ReceiveData(SerialLink *link_ptr, const std::vector<ui
     }
 }
 
-void MACEDigiMeshWrapper::CommunicationError(const SerialLink* link_ptr, const std::string &type, const std::string &msg)
+void DigiMeshRadio::CommunicationError(const SerialLink* link_ptr, const std::string &type, const std::string &msg)
 {
 
 }
 
-void MACEDigiMeshWrapper::CommunicationUpdate(const SerialLink *link_ptr, const std::string &name, const std::string &msg)
+void DigiMeshRadio::CommunicationUpdate(const SerialLink *link_ptr, const std::string &name, const std::string &msg)
 {
 
 }
 
-void MACEDigiMeshWrapper::Connected(const SerialLink* link_ptr)
+void DigiMeshRadio::Connected(const SerialLink* link_ptr)
 {
 
 }
 
-void MACEDigiMeshWrapper::ConnectionRemoved(const SerialLink *link_ptr)
+void DigiMeshRadio::ConnectionRemoved(const SerialLink *link_ptr)
 {
 
 }
 
 
-void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> &buf) {
+void DigiMeshRadio::handle_AT_command_response(const std::vector<uint8_t> &buf) {
     uint8_t frame_id = buf[1];
 
     uint8_t status = buf[4];
@@ -189,7 +189,7 @@ void MACEDigiMeshWrapper::handle_AT_command_response(const std::vector<uint8_t> 
 
 }
 
-void MACEDigiMeshWrapper::handle_receive_packet(const std::vector<uint8_t> &data)
+void DigiMeshRadio::handle_receive_packet(const std::vector<uint8_t> &data)
 {
     ATData::Message msg(data);
 
@@ -198,7 +198,7 @@ void MACEDigiMeshWrapper::handle_receive_packet(const std::vector<uint8_t> &data
     }
 }
 
-int MACEDigiMeshWrapper::reserve_next_frame_id()
+int DigiMeshRadio::reserve_next_frame_id()
 {
     std::lock_guard<std::mutex> lock(m_FrameSelectionMutex);
 
@@ -228,7 +228,7 @@ int MACEDigiMeshWrapper::reserve_next_frame_id()
 }
 
 
-void MACEDigiMeshWrapper::finish_frame(int frame_id)
+void DigiMeshRadio::finish_frame(int frame_id)
 {
     this->m_CurrentFrames[frame_id].inUse = false;
 }

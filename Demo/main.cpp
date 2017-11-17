@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "mace_digimesh_wrapper.h"
+#include "digimesh_radio.h"
 #include "digi_mesh_baud_rates.h"
 
 #include "ATData/index.h"
@@ -11,11 +11,12 @@ int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
 
-    const char* RADIO1 = "COM3";
+    const char* RADIO1 = "COM6";
     const char* RADIO2 = "COM4";
 
-    MACEDigiMeshWrapper wrapper1(RADIO1, DigiMeshBaudRates::Baud9600);
-    MACEDigiMeshWrapper wrapper2(RADIO2, DigiMeshBaudRates::Baud9600);
+    DigiMeshRadio wrapper1(RADIO1, DigiMeshBaudRates::Baud9600);
+    DigiMeshRadio wrapper2(RADIO2, DigiMeshBaudRates::Baud9600);
+
 
 
     wrapper2.AddMessageHandler([RADIO2](const ATData::Message &data)
@@ -29,19 +30,20 @@ int main(int argc, char *argv[])
         }
     });
 
-    //wrapper1.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    wrapper1.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
     //wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
 
 
-    /*
-    wrapper1.SetATParameterAsync<ATData::String>("NI", "AA");
-    wrapper.GetATParameterAsync<ATData::String>("NI", [](const std::vector<ATData::String> &a){
+
+    wrapper1.SetATParameterAsync<ATData::String>("NI", RADIO1);
+    wrapper1.GetATParameterAsync<ATData::String>("NI", [RADIO1](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
-            printf("COM4 Ni: %s\n", a[0].c_str());
+            printf("%s Ni: %s\n", a[0].c_str(), RADIO1);
         }
     }, ShutdownFirstResponse());
 
 
+    /*
     wrapper2.SetATParameterAsync<ATData::String>("NI", "BB");
     wrapper2.GetATParameterAsync<ATData::String>("NI", [](const std::vector<ATData::String> &a){
         if(a.size() > 0) {

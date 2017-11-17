@@ -1,7 +1,7 @@
 #ifndef MACE_DIGIMESH_WRAPPER_H
 #define MACE_DIGIMESH_WRAPPER_H
 
-#include "macedigimeshwrapper_global.h"
+#include "DigiMesh_global.h"
 #include <vector>
 #include <map>
 #include <functional>
@@ -34,7 +34,7 @@
 #define CALLBACK_QUEUE_SIZE 256
 
 
-class MACEDIGIMESHWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : private ILinkEvents
+class DIGIMESHSHARED_EXPORT DigiMeshRadio : public ILinkEvents
 {
 private:
 
@@ -60,9 +60,9 @@ private:
     std::vector<std::function<void(const ATData::Message&)>> m_MessageHandlers;
 
 public:
-    MACEDigiMeshWrapper(const std::string &commPort, const DigiMeshBaudRates &baudRate);
+    DigiMeshRadio(const std::string &commPort, const DigiMeshBaudRates &baudRate);
 
-    ~MACEDigiMeshWrapper();
+    ~DigiMeshRadio();
 
     /**
      * @brief SetOnNewVehicleCallback
@@ -227,7 +227,7 @@ private:
             }
         }
 
-        tx_buf[7 + param_len] = MathHelper::calc_checksum(tx_buf, 3, 8 + param_len-1);
+        tx_buf[7 + param_len] = MathHelper::calc_checksum<char>(tx_buf, 3, 8 + param_len-1);
 
         //console.log(tx_buf.toString('hex').replace(/(.{2})/g, "$1 "));
         m_Link->MarshalOnThread([this, tx_buf, param_len, frame_id, frameBehavior](){

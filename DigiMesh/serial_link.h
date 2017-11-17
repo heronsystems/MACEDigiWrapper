@@ -1,7 +1,7 @@
 #ifndef SERIALLINK_H
 #define SERIALLINK_H
 
-#include "macedigimeshwrapper_global.h"
+#include "DigiMesh_global.h"
 #include <chrono>
 #include <mutex>
 #include <iostream>
@@ -16,7 +16,7 @@
 
 #include "i_link_events.h"
 
-class MACEDIGIMESHWRAPPERSHARED_EXPORT SerialLink
+class DIGIMESHSHARED_EXPORT SerialLink
 {
 private:
 
