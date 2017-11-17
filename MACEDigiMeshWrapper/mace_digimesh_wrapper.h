@@ -3,11 +3,11 @@
 
 #include "macewrapper_global.h"
 
-class MACEWRAPPERSHARED_EXPORT MACEWrapper
+class MACEWRAPPERSHARED_EXPORT MACEDigiMeshWrapper
 {
 
 public:
-    MACEWrapper();
+    MACEDigiMeshWrapper();
 };
 
 #endif // MACE_WRAPPER_H

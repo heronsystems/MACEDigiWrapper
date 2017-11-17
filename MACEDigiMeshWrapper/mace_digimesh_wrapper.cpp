@@ -1,6 +1,6 @@
 #include "mace_digimesh_wrapper.h"
 
 
-MACEWrapper::MACEWrapper()
+MACEDigiMeshWrapper::MACEDigiMeshWrapper()
 {
 }
