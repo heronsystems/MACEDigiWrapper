@@ -6,8 +6,7 @@ QT += serialport
 
 SOURCES += main.cpp \
 
-HEADERS += \
-    *.h
+HEADERS +=
 
 INCLUDEPATH += $$PWD/../
 

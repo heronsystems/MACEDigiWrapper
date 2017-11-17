@@ -51,8 +51,3 @@ HEADERS += \
     serial_configuration.h \
     serial_link.h \
     timer.h
-
-unix {
-    target.path = /usr/lib
-    INSTALLS += target
-}

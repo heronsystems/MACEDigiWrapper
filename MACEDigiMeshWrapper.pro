@@ -2,4 +2,4 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
     DigiMesh \
-    Demo
+    Demo_Digimesh
