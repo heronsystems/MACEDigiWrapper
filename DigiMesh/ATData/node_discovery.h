@@ -11,6 +11,11 @@ class NodeDiscovery : public IATData {
 
 public:
 
+    NodeDiscovery()
+    {
+
+    }
+
     NodeDiscovery(const std::vector<uint8_t> &data)
     {
         DeSerialize(data);

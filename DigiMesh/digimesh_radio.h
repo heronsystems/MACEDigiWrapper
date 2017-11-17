@@ -85,33 +85,8 @@ public:
     }
 
 
-    /**
-     * @brief AddVehicle
-     * Add a vehicle to the DigiMesh network.
-     * @param ID Unique Identifier of vehicle
-     */
-    void AddVehicle(const int ID);
-
-
-    /**
-     * @brief BroadcastData
-     * Broadcast data to all nodes on network
-     * @param data
-     */
-    void BroadcastData(const std::vector<uint8_t> &data);
-
-
-    /**
-     * @brief SendData
-     * Send data to a specific vehicle
-     * @param vechileID
-     * @param data
-     */
-    void SendData(const int vechileID, const std::vector<uint8_t> &data);
-
-
     template <typename T, typename P>
-    void GetATParameterAsync(const std::string &parameterName, const std::function<void(const std::vector<T> &)> &callback, const P &persistance)
+    void GetATParameterAsync(const std::string &parameterName, const std::function<void(const std::vector<T> &)> &callback, const P &persistance = P())
     {
         static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
@@ -122,18 +97,42 @@ public:
     }
 
 
-    void GetATParameterSync(const std::string &parameterName)
+    template <typename T, typename P>
+    std::vector<T> GetATParameterSync(const std::string &parameterName, const P &persistance = P())
     {
-        throw std::runtime_error("Not Implimented");
+        std::mutex locker;
+        locker.lock();
+
+        std::vector<T> rtn;
+        GetATParameterAsync<T, P>(parameterName, [&rtn, &locker](const std::vector<T> &data){
+            rtn = data;
+            locker.unlock();
+        }, persistance);
+
+        locker.lock();
+        return rtn;
     }
 
+    template <typename T>
+    void SetATParameterSync(const std::string &parameterName, const T &value){
+
+        //create mutex and lock it
+        std::mutex waitMutex;
+        waitMutex.lock();
+
+        //call function, unlock mutex in callback
+        SetATParameterAsync<T>(parameterName, value, [&waitMutex](){waitMutex.unlock();});
+
+        //lock mutex again, blocking this until above is called
+        waitMutex.lock();
+    }
 
     template <typename T>
-    void SetATParameterAsync(const std::string &parameterName, const T &value)
+    void SetATParameterAsync(const std::string &parameterName, const T &value, const std::function<void()> &cb= [](){})
     {
         static_assert(std::is_base_of<ATData::IATData, T>::value, "T must be a descendant of ATDATA::IATDATA");
 
-        SetATParameterAsync<T, ATData::Void>(parameterName, value, [](const std::vector<ATData::Void>&){});
+        SetATParameterAsync<T, ATData::Void>(parameterName, value, [cb](const std::vector<ATData::Void>&){cb();});
     }
 
 

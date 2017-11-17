@@ -3,8 +3,8 @@
 # Project created by QtCreator 2017-11-17T10:10:19
 #
 #-------------------------------------------------
-
-QT       -= core gui
+QT += serialport
+QT       -= gui
 
 TARGET = MACEDigiMeshWrapper
 TEMPLATE = lib

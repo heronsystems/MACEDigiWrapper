@@ -3,4 +3,5 @@ TEMPLATE = subdirs
 SUBDIRS += \
     DigiMesh \
     Demo_Digimesh \
-    MACEDigiMeshWrapper
+    MACEDigiMeshWrapper \
+    Demo_MACE

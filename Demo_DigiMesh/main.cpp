@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     const char* RADIO1 = "COM6";
     const char* RADIO2 = "COM4";
 
+
     DigiMeshRadio wrapper1(RADIO1, DigiMeshBaudRates::Baud9600);
     DigiMeshRadio wrapper2(RADIO2, DigiMeshBaudRates::Baud9600);
 
@@ -30,15 +31,15 @@ int main(int argc, char *argv[])
         }
     });
 
-    wrapper1.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
-    //wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    wrapper1.SetATParameterSync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
+    wrapper2.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1));
 
 
 
-    wrapper1.SetATParameterAsync<ATData::String>("NI", RADIO1);
+    wrapper1.SetATParameterAsync<ATData::String>("NI", "1");
     wrapper1.GetATParameterAsync<ATData::String>("NI", [RADIO1](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
-            printf("%s Ni: %s\n", a[0].c_str(), RADIO1);
+            printf("%s Ni: %s\n", RADIO1, a[0].c_str());
         }
     }, ShutdownFirstResponse());
 

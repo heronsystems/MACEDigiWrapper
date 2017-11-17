@@ -30,6 +30,10 @@ DigiMeshRadio::DigiMeshRadio(const std::string &commPort, const DigiMeshBaudRate
 
 DigiMeshRadio::~DigiMeshRadio() {
     delete[] m_CurrentFrames;
+
+    if(m_Link != NULL) {
+        delete m_Link;
+    }
 }
 
 /**
@@ -51,40 +55,6 @@ void DigiMeshRadio::SetOnNewVehicleCallback(std::function<void(const int)> func)
 void DigiMeshRadio::SetNewDataCallback(std::function<void(const std::vector<uint8_t> &)> func)
 {
     this->m_NewDataCallback = func;
-}
-
-
-/**
- * @brief AddVehicle
- * Add a vehicle to the DigiMesh network.
- * @param ID Unique Identifier of vehicle
- */
-void DigiMeshRadio::AddVehicle(const int ID)
-{
-
-}
-
-
-/**
- * @brief BroadcastData
- * Broadcast data to all nodes on network
- * @param data
- */
-void DigiMeshRadio::BroadcastData(const std::vector<uint8_t> &data)
-{
-
-}
-
-
-/**
- * @brief SendData
- * Send data to a specific vehicle
- * @param vechileID
- * @param data
- */
-void DigiMeshRadio::SendData(const int vechileID, const std::vector<uint8_t> &data)
-{
-
 }
 
 
