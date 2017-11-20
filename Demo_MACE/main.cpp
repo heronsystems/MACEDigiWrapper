@@ -14,8 +14,13 @@ int main(int argc, char *argv[])
         printf("  DigiMesh Addr: %llx", addr);
     });
 
-    wrapper.AddVehicle(4);
-    wrapper.AddVehicle(5);
+    wrapper.AddHandler_Data([](const std::vector<uint8_t> &data) {
+        printf("New Data Received");
+    });
+
+    wrapper.AddVehicle(1);
+
+    wrapper.SendData(1, {0, 1, 2, 3});
 
 
     while(true) {

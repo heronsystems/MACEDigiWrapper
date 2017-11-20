@@ -22,6 +22,14 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &port, DigiMeshBaudRa
         m_NIMutex.lock();
         m_Radio.SetATParameterAsync<ATData::String>("NI", "", [this](){m_NIMutex.unlock();});
     });
+
+    m_Radio.AddMessageHandler([this](const ATData::Message &a){this->on_message_received(a);});
+
+
+    //broadcast a request for everyone to send their vehicles
+    std::vector<uint8_t> packet;
+    packet.push_back((uint8_t)PacketTypes::CONTAINED_VECHILES_REQUEST);
+    m_Radio.SendMessage(packet);
 }
 
 
@@ -40,6 +48,8 @@ void MACEDigiMeshWrapper::AddVehicle(const int &ID)
     m_VehicleIDMutex.lock();
     m_VehicleIDToRadioAddr.insert({ID, 0x00});
     m_VehicleIDMutex.unlock();
+
+    m_ContainedVehicles.push_back(ID);
 
     m_NIMutex.lock();
     m_Radio.GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
@@ -60,12 +70,56 @@ void MACEDigiMeshWrapper::AddVehicle(const int &ID)
            m_Radio.SetATParameterAsync("NI", currNI, [this](){m_NIMutex.unlock();});
        }
     });
+
+    send_vehicle_message(ID);
 }
 
 
+/**
+ * @brief Add handler to be called when a new vehicle is added to the network
+ * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
+ */
 void MACEDigiMeshWrapper::AddHandler_NewRemoteVehicle(const std::function<void(int, uint64_t)> &lambda)
 {
     m_Handlers_NewRemoteVehicle.push_back(lambda);
+}
+
+
+/**
+ * @brief Add handler to be called when data has been received to this node
+ * @param lambda Lambda function accepting an array of single byte values
+ */
+void MACEDigiMeshWrapper::AddHandler_Data(const std::function<void(const std::vector<uint8_t>& data)> &lambda)
+{
+    m_Handlers_Data.push_back(lambda);
+}
+
+
+/**
+ * @brief Send data to a vechile
+ * @param destVechileID ID of vehicle
+ * @param data Data to send
+ * @throws std::runtime_error Thrown if no vechile of given id is known.
+ */
+void MACEDigiMeshWrapper::SendData(const int &destVechileID, const std::vector<uint8_t> &data)
+{
+    if(m_VehicleIDToRadioAddr.find(destVechileID) == m_VehicleIDToRadioAddr.end()) {
+        throw std::runtime_error("No known vehicle");
+    }
+
+    //address to send to
+    uint64_t addr = m_VehicleIDToRadioAddr.at(destVechileID);
+    if(addr == 0) {
+        Notify<const std::vector<uint8_t>&>(m_Handlers_Data, data);
+    }
+
+    //construct packet, putting the packet type at head
+    std::vector<uint8_t> packet = {(uint8_t)PacketTypes::DATA};
+    for(int i = 0 ; i < data.size() ; i++) {
+        packet.push_back(data.at(i));
+    }
+
+    m_Radio.SendMessage(packet, this->m_VehicleIDToRadioAddr[destVechileID]);
 }
 
 void MACEDigiMeshWrapper::run_scan() {
@@ -103,16 +157,80 @@ void MACEDigiMeshWrapper::run_scan() {
                     continue;
                 }
 
-                //if the vehicle of given id doesn't exists, add it
-                if(m_VehicleIDToRadioAddr.find(num) == m_VehicleIDToRadioAddr.end()) {
-                    m_VehicleIDMutex.lock();
-                    m_VehicleIDToRadioAddr.insert({num, node.addr});
-                    m_VehicleIDMutex.unlock();
 
-                    Notify<int, uint64_t>(m_Handlers_NewRemoteVehicle, num, node.addr);
-                }
+                on_new_remote_vehicle(num, node.addr);
             }
 
         }
     }
 }
+
+
+/**
+ * @brief Logic to perform upon reception of a message
+ * @param msg Message received
+ */
+void MACEDigiMeshWrapper::on_message_received(const ATData::Message &msg)
+{
+    PacketTypes packetType = (PacketTypes)msg.data.at(0);
+    switch(packetType) {
+        case PacketTypes::DATA:
+            {
+            std::vector<uint8_t> data;
+            for(int i = 1 ; i < msg.data.size() ; i++) {
+                data.push_back(msg.data.at(i));
+            }
+            Notify<const std::vector<uint8_t>&>(m_Handlers_Data, data);
+            break;
+        }
+        case PacketTypes::NEW_VECHILE:
+        {
+            int vehicleID = 0;
+            for(int i = 0 ; i < 4 ; i++) {
+                vehicleID |= (((uint64_t)msg.data[1+i]) << (8*(3-i)));
+            }
+            on_new_remote_vehicle(vehicleID, msg.addr);
+            break;
+        }
+        case PacketTypes::CONTAINED_VECHILES_REQUEST:
+        {
+            for(auto it = m_ContainedVehicles.cbegin() ; it != m_ContainedVehicles.cend() ; ++it) {
+                send_vehicle_message(*it);
+            }
+            break;
+        }
+        default:
+            throw std::runtime_error("Unknown packet type received over digimesh network");
+    }
+}
+
+
+/**
+ * @brief Logic to perform when a vehicle is known about
+ * @param vehicleID ID of vehicle
+ * @param addr Digimesh node that vehicle is contained on. 0 if node is own address
+ */
+void MACEDigiMeshWrapper::on_new_remote_vehicle(const int vehicleID, const uint64_t &addr)
+{
+    //if the vehicle of given id doesn't exists, add it
+    if(m_VehicleIDToRadioAddr.find(vehicleID) == m_VehicleIDToRadioAddr.end()) {
+        m_VehicleIDMutex.lock();
+        m_VehicleIDToRadioAddr.insert({vehicleID, addr});
+        m_VehicleIDMutex.unlock();
+
+        Notify<int, uint64_t>(m_Handlers_NewRemoteVehicle, vehicleID, addr);
+    }
+}
+
+void MACEDigiMeshWrapper::send_vehicle_message(const int vehicleID)
+{
+    std::vector<uint8_t> packet;
+    packet.push_back((uint8_t)PacketTypes::NEW_VECHILE);
+    for(size_t i = 0 ; i < 4 ; i++) {
+        uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
+        packet.push_back((char)a);
+    }
+    m_Radio.SendMessage(packet);
+}
+
+
