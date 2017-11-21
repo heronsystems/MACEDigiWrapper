@@ -177,7 +177,7 @@ public:
         for(size_t i = 0 ; i < data.size() ; i++) {
             tx_buf[17+i] = data.at(i);
         }
-        tx_buf[total_length-1] = MathHelper::calc_checksum(tx_buf, 3, total_length-2);
+        tx_buf[total_length-1] = MathHelper::calc_checksum(tx_buf, 3, total_length-1);
         m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id](){
             m_Link->WriteBytes(tx_buf, total_length);
 
@@ -247,7 +247,7 @@ private:
 
     void find_and_invokve_frame(int frame_id, const std::vector<uint8_t> &data)
     {
-        if(this->m_CurrentFrames[frame_id].framePersistance->HasCallback() == true) {
+        if(this->m_CurrentFrames[frame_id].inUse == true && this->m_CurrentFrames[frame_id].framePersistance != NULL && this->m_CurrentFrames[frame_id].framePersistance->HasCallback() == true) {
             this->m_CurrentFrames[frame_id].framePersistance->AddFrameReturn(frame_id, data);
         }
     }

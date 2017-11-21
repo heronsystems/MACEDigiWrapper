@@ -83,6 +83,13 @@ public:
      */
     void SendData(const int &destVechileID, const std::vector<uint8_t> &data);
 
+
+    /**
+     * @brief Broadcast data to all nodes
+     * @param data Data to broadcast out
+     */
+    void BroadcastData(const std::vector<uint8_t> &data);
+
 private:
 
     void run_scan();

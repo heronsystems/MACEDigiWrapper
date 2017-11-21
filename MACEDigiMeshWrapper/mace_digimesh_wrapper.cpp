@@ -15,12 +15,14 @@ void Notify(std::vector<std::function<void(T...)>> lambdas, T... args)
 
 MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &port, DigiMeshBaudRates rate) :
     m_Radio(port, rate),
-    m_ScanThread([this](){run_scan();}),
+    //m_ScanThread([this](){run_scan();}),
     m_ShutdownScanThread(false)
 {
+    m_NIMutex.lock();
     m_Radio.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1), [this](){
-        m_NIMutex.lock();
-        m_Radio.SetATParameterAsync<ATData::String>("NI", "", [this](){m_NIMutex.unlock();});
+        m_Radio.SetATParameterAsync<ATData::String>("NI", "-", [this](){
+            m_NIMutex.unlock();
+        });
     });
 
     m_Radio.AddMessageHandler([this](const ATData::Message &a){this->on_message_received(a);});
@@ -34,7 +36,7 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &port, DigiMeshBaudRa
 
 
 MACEDigiMeshWrapper::~MACEDigiMeshWrapper() {
-    m_Radio.SetATParameterAsync<ATData::String>("AP", "");
+    m_Radio.SetATParameterAsync<ATData::String>("AP", "-");
     m_ShutdownScanThread = true;
 }
 
@@ -55,7 +57,7 @@ void MACEDigiMeshWrapper::AddVehicle(const int &ID)
     m_Radio.GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
        ATData::String currNI = currNIarr.at(0) ;
        bool changeMade = false;
-       if(currNI == "") {
+       if(currNI == "-") {
            currNI.assign(std::to_string(ID));
            changeMade = true;
        }
@@ -120,6 +122,22 @@ void MACEDigiMeshWrapper::SendData(const int &destVechileID, const std::vector<u
     }
 
     m_Radio.SendMessage(packet, this->m_VehicleIDToRadioAddr[destVechileID]);
+}
+
+
+/**
+ * @brief Broadcast data to all nodes
+ * @param data Data to broadcast out
+ */
+void MACEDigiMeshWrapper::BroadcastData(const std::vector<uint8_t> &data)
+{
+    //construct packet, putting the packet type at head
+    std::vector<uint8_t> packet = {(uint8_t)PacketTypes::DATA};
+    for(int i = 0 ; i < data.size() ; i++) {
+        packet.push_back(data.at(i));
+    }
+
+    m_Radio.SendMessage(packet);
 }
 
 void MACEDigiMeshWrapper::run_scan() {
