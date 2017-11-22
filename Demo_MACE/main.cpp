@@ -8,8 +8,8 @@ int main(int argc, char *argv[])
     const char* RADIO1 = "COM4";
     const char* RADIO2 = "COM5";
 
-    MACEDigiMeshWrapper *wrapper1 = new MACEDigiMeshWrapper(RADIO1, DigiMeshBaudRates::Baud9600);
-    MACEDigiMeshWrapper *wrapper2 = new MACEDigiMeshWrapper(RADIO2, DigiMeshBaudRates::Baud9600);
+    MACEDigiMeshWrapper *wrapper1 = new MACEDigiMeshWrapper(RADIO1, DigiMeshBaudRates::Baud9600, "A");
+    MACEDigiMeshWrapper *wrapper2 = new MACEDigiMeshWrapper(RADIO2, DigiMeshBaudRates::Baud9600, "B");
 
     wrapper1->AddHandler_NewRemoteVehicle([RADIO1](int num, uint64_t addr){
         printf("%s\n New Remote Vehicle\n", RADIO1);
@@ -38,6 +38,11 @@ int main(int argc, char *argv[])
 
     wrapper1->SendData(2, {0x1, 0x2, 0x3});
     wrapper2->BroadcastData({0x1, 0x2, 0x3});
+
+    Sleep(1000);
+
+    wrapper1->RemoveVehicle(1);
+    wrapper2->RemoveVehicle(2);
 
 
 

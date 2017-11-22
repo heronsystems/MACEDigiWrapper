@@ -149,13 +149,20 @@ public:
         AT_command_helper(parameterName, frameBehavior, data);
     }
 
-    void SendMessage(const std::vector<uint8_t> &data)
+    void SendMessage(const std::vector<uint8_t> &data, const std::function<void(const ATData::TransmitStatus &)> &callback = [](const ATData::TransmitStatus &){})
     {
-        SendMessage(data, BROADCAST_ADDRESS);
+        SendMessage(data, BROADCAST_ADDRESS, callback);
     }
 
-    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr)
+    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr, const std::function<void(const ATData::TransmitStatus &)> &callback = [](const ATData::TransmitStatus &){})
     {
+        std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> frameBehavior = std::make_shared<FramePersistanceBehavior<ShutdownFirstResponse>>(ShutdownFirstResponse());
+        ((FramePersistanceBehavior<>*)frameBehavior.get())->setCallback<ATData::TransmitStatus>([&callback](const std::vector<ATData::TransmitStatus> &arr)
+        {
+            callback(arr.at(0));
+        });
+
+
         int packet_length = 14 + data.size();
         int total_length = packet_length+4;
         char *tx_buf = new char[total_length];
@@ -178,7 +185,8 @@ public:
             tx_buf[17+i] = data.at(i);
         }
         tx_buf[total_length-1] = MathHelper::calc_checksum(tx_buf, 3, total_length-1);
-        m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id](){
+        m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id, frameBehavior](){
+            m_CurrentFrames[frame_id].framePersistance = frameBehavior;
             m_Link->WriteBytes(tx_buf, total_length);
 
             delete[] tx_buf;
@@ -240,6 +248,8 @@ private:
     }
 
     void handle_AT_command_response(const std::vector<uint8_t> &buff);
+
+    void handle_transmit_status(const std::vector<uint8_t> &data);
 
     void handle_receive_packet(const std::vector<uint8_t> &);
 

@@ -50,4 +50,5 @@ HEADERS += \
     math_helper.h \
     serial_configuration.h \
     serial_link.h \
-    timer.h
+    timer.h \
+    ATData/transmit_status.h

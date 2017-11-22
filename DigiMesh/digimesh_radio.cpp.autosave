@@ -98,7 +98,6 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
             case FRAME_MODEM_STATUS:
                 break;
             case FRAME_TRANSMIT_STATUS:
-                printf("A\n");
                 handle_transmit_status(packet);
                 break;
             case FRAME_RECEIVE_PACKET:
