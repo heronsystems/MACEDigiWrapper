@@ -31,6 +31,9 @@
 *.out
 *.app
 
+include/**
+lib/**
+
 build*/*
 *.pro.user
 **/*.pro.user

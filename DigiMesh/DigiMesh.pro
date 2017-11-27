@@ -52,3 +52,10 @@ HEADERS += \
     serial_link.h \
     timer.h \
     ATData/transmit_status.h
+
+win32:CONFIG(release, debug|release):       copydata.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) release/*.dll $$PWD/../lib/
+else:win32:CONFIG(debug, debug|release):    copydata.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) $$OUT_PWD/debug/*.dll $$PWD/../lib/
+first.depends = $(first) copydata
+export(first.depends)
+export(copydata.commands)
+QMAKE_EXTRA_TARGETS += first copydata
