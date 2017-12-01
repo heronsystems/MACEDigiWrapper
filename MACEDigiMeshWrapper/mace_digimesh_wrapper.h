@@ -32,8 +32,141 @@
  *      0x04 | ID byte 1 (MSB) | ID byte 2 | ID byte 3 | ID byte 1 (LSB)
  *
  */
-class MACEWRAPPERSHARED_EXPORT MACEDigiMeshWrapper
+
+
+template <typename ...T>
+void Notify(std::vector<std::function<void(T...)>> lambdas, T... args)
 {
+    for(auto it = lambdas.cbegin() ; it != lambdas.cend() ; ++it) {
+        (*it)(args...);
+    }
+}
+
+template<const char*... A>
+class _MACEDigiMeshWrapper;
+
+
+
+class DigiMeshElement
+{
+private:
+
+    std::unordered_map<int, uint64_t> m_VehicleIDToRadioAddr;
+    std::mutex m_VehicleIDMutex;
+
+    std::vector<int> m_ContainedVehicles;
+
+public:
+    std::vector<std::function<void(int, uint64_t)>> m_Handlers_NewRemoteVehicle;
+    std::vector<std::function<void(int)>> m_Handlers_RemoteVehicleRemoved;
+    std::vector<std::function<void(int, TransmitStatusTypes)>> m_Handlers_VehicleNotReached;
+
+public:
+
+    void AddInternalElement(int vehicleID) {
+
+        if(m_VehicleIDToRadioAddr.find(vehicleID) != m_VehicleIDToRadioAddr.cend()){
+            throw std::runtime_error("Vehicle of given ID already exists");
+        }
+
+        m_VehicleIDMutex.lock();
+        m_VehicleIDToRadioAddr.insert({vehicleID, 0x00});
+        m_VehicleIDMutex.unlock();
+
+        m_ContainedVehicles.push_back(vehicleID);
+    }
+
+    uint64_t GetAddr(int ID)
+    {
+        return m_VehicleIDToRadioAddr.at(ID);
+    }
+
+    std::vector<int> ContainedIDs() const {
+        return m_ContainedVehicles;
+    }
+
+    bool AddExternalElement(int vehicleID, uint64_t addr) {
+
+        if(m_VehicleIDToRadioAddr.find(vehicleID) == m_VehicleIDToRadioAddr.end()) {
+            m_VehicleIDMutex.lock();
+            m_VehicleIDToRadioAddr.insert({vehicleID, addr});
+            m_VehicleIDMutex.unlock();
+
+            return true;
+        }
+        else {
+            if(m_VehicleIDToRadioAddr[vehicleID] != addr) {
+                throw std::runtime_error("Remote Vehicle ID passed to this node already exists");
+            }
+
+            return false;
+        }
+    }
+
+
+    void AddHandler_NewRemoteVehicle(const std::function<void(int, uint64_t)> &lambda)
+    {
+        m_Handlers_NewRemoteVehicle.push_back(lambda);
+    }
+
+
+    void AddHandler_RemoteVehicleRemoved(const std::function<void(int)> &lambda)
+    {
+
+    }
+
+
+    void AddHandler_Data(const std::function<void(const std::vector<uint8_t>& data)> &lambda)
+    {
+
+    }
+
+
+    void AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+    {
+
+    }
+
+};
+
+
+template<const char* Type, const char*... Rest>
+class _MACEDigiMeshWrapper<Type, Rest...> : public _MACEDigiMeshWrapper<Rest...>
+{
+private:
+
+public:
+
+    _MACEDigiMeshWrapper<Type, Rest...>()
+    {
+        _MACEDigiMeshWrapper<Rest...>::m_ElementMap.insert({Type, new DigiMeshElement()});
+    }
+
+    ~_MACEDigiMeshWrapper<Type, Rest...>()
+    {
+
+    }
+
+};
+
+template <>
+class MACEWRAPPERSHARED_EXPORT _MACEDigiMeshWrapper<>
+{
+public:
+    std::unordered_map<std::string, DigiMeshElement*> m_ElementMap;
+
+public:
+
+    _MACEDigiMeshWrapper<>() {
+
+    }
+};
+
+
+template <const char*... A>
+class MACEWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : public _MACEDigiMeshWrapper<A...>
+{
+    using _MACEDigiMeshWrapper<A...>::m_ElementMap;
 private:
 
 
@@ -49,19 +182,13 @@ private:
 
     void* m_Radio;
 
-    std::vector<int> m_ContainedVehicles;
-    std::unordered_map<int, uint64_t> m_VehicleIDToRadioAddr;
-    std::mutex m_VehicleIDMutex;
 
     std::mutex m_NIMutex;
 
     std::thread *m_ScanThread;
     bool m_ShutdownScanThread;
 
-    std::vector<std::function<void(int, uint64_t)>> m_Handlers_NewRemoteVehicle;
     std::vector<std::function<void(const std::vector<uint8_t>&)>> m_Handlers_Data;
-    std::vector<std::function<void(int)>> m_Handlers_RemoteVehicleRemoved;
-    std::vector<std::function<void(int, TransmitStatusTypes)>> m_Handlers_VehicleNotReached;
 
     std::string m_NodeName;
 
@@ -80,49 +207,55 @@ public:
 
     ~MACEDigiMeshWrapper();
 
-    /**
-     * @brief Adds a vechile to the network.
-     * @param ID ID of vehicle to add
-     * @throws std::runtime_error Thrown if given vehicleID already exists
-     */
-    void AddVehicle(const int &ID);
 
-
-    /**
-     * @brief Removes a vehicle from the network.
-     *
-     * If given ID doesn't coorilate to any vehicle, no action is done
-     * @param ID ID of vehicle
-     */
-    void RemoveVehicle(const int &ID);
+    template <const char* T>
+    void AddElement(const int ID) {
+        this->m_ElementMap[T]->AddInternalElement(ID);
+        send_vehicle_present_message(T, ID);
+    }
 
 
     /**
      * @brief Add handler to be called when a new vehicle is added to the network
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
      */
-    void AddHandler_NewRemoteVehicle(const std::function<void(int, uint64_t)> &lambda);
+    template <const char * T>
+    void AddHandler_NewRemoteVehicle(const std::function<void(int, uint64_t)> &lambda)
+    {
+        m_ElementMap[T]->AddHandler_NewRemoteVehicle(lambda);
+    }
 
 
     /**
      * @brief Add handler to be called when a new vehicle has been removed from the network
      * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
      */
-    void AddHandler_RemoteVehicleRemoved(const std::function<void(int)> &lambda);
+    template <const char * T>
+    void AddHandler_RemoteVehicleRemoved(const std::function<void(int)> &lambda)
+    {
+        m_ElementMap[T]->AddHandler_RemoteVehicleRemoved(lambda);
+    }
 
 
     /**
      * @brief Add handler to be called when data has been received to this node
      * @param lambda Lambda function accepting an array of single byte values
      */
-    void AddHandler_Data(const std::function<void(const std::vector<uint8_t>& data)> &lambda);
+    void AddHandler_Data(const std::function<void(const std::vector<uint8_t>& data)> &lambda)
+    {
+        m_Handlers_Data.push_back(lambda);
+    }
 
 
     /**
      * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
      * @param lambda Lambda function to pass vehicle ID and status code
      */
-    void AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda);
+    template <const char * T>
+    void AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+    {
+        m_ElementMap[T]->AddHandler_VehicleTransmitError(lambda);
+    }
 
 
     /**
@@ -131,7 +264,20 @@ public:
      * @param data Data to send
      * @throws std::runtime_error Thrown if no vehicle of given id is known.
      */
-    void SendData(const int &destVehicleID, const std::vector<uint8_t> &data);
+    template <const char* T>
+    void SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
+    {
+        //address to send to
+        uint64_t addr = m_ElementMap[T]->GetAddr(destVehicleID);
+
+        send_data_to_address(addr, data, [this, destVehicleID](const TransmitStatusTypes &status){
+
+            if(status != TransmitStatusTypes::SUCCESS)
+            {
+                Notify<int, TransmitStatusTypes>(this->m_ElementMap[T]->m_Handlers_VehicleNotReached, destVehicleID, status);
+            }
+        });
+    }
 
 
     /**
@@ -142,6 +288,8 @@ public:
 
 
 private:
+
+    void send_data_to_address(uint64_t addr, const std::vector<uint8_t> &data, const std::function<void(const TransmitStatusTypes &)> &cb);
 
     void run_scan();
 
@@ -158,7 +306,7 @@ private:
      * @param vehicleID ID of vehicle
      * @param addr Digimesh node that vehicle is contained on. 0 if node is own address
      */
-    void on_new_remote_vehicle(const int vehicleID, const uint64_t &addr);
+    void on_new_remote_vehicle(const char* elementType, const int vehicleID, const uint64_t &addr);
 
 
     /**
@@ -168,9 +316,11 @@ private:
     void on_remote_vehicle_removed(const int vehicleID);
 
 
-    void send_vehicle_present_message(const int vehicleID);
+    void send_vehicle_present_message(const char *elementName, const int vehicleID);
 
     void send_vehicle_removal_message(const int vehicleID);
 };
+
+#include "mace_digimesh_wrapper.hpp"
 
 #endif // MACE_WRAPPER_H

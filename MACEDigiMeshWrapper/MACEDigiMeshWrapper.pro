@@ -22,12 +22,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-SOURCES += \
-    mace_digimesh_wrapper.cpp
+SOURCES +=
 
 HEADERS +=\
         macewrapper_global.h \
-    mace_digimesh_wrapper.h
+    mace_digimesh_wrapper.h \
+    mace_digimesh_wrapper.hpp
 
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../DigiMesh/release/ -lDigiMesh
