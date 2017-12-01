@@ -4,4 +4,5 @@ SUBDIRS += \
     DigiMesh \
     Demo_Digimesh \
     MACEDigiMeshWrapper \
-    Demo_MACE
+    Demo_MACE \
+    common

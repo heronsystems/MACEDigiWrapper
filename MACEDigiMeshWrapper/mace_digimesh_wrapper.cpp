@@ -3,6 +3,9 @@
 #include <sstream>
 #include <iostream>
 #include <vector>
+#include <mutex>
+
+#include "digimesh_radio.h"
 
 template <typename ...T>
 void Notify(std::vector<std::function<void(T...)>> lambdas, T... args)
@@ -25,13 +28,14 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
 
 
 MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &port, DigiMeshBaudRates rate, const std::string &nameOfNode, bool scanForNodes) :
-    m_Radio(port, rate),
     m_ShutdownScanThread(false),
     m_NodeName(nameOfNode)
 {
+    m_Radio = new DigiMeshRadio(port, rate);
+
     m_NIMutex.lock();
-    m_Radio.SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1), [this](){
-        m_Radio.SetATParameterAsync<ATData::String>("NI", m_NodeName.c_str(), [this](){
+    ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1), [this](){
+        ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::String>("NI", m_NodeName.c_str(), [this](){
             m_NIMutex.unlock();
         });
 
@@ -42,19 +46,19 @@ MACEDigiMeshWrapper::MACEDigiMeshWrapper(const std::string &port, DigiMeshBaudRa
         m_ScanThread = new std::thread([this](){run_scan();});
     }
 
-    m_Radio.AddMessageHandler([this](const ATData::Message &a){this->on_message_received(a);});
+    ((DigiMeshRadio*)m_Radio)->AddMessageHandler([this](const ATData::Message &a){this->on_message_received(a.data, a.addr);});
 
 
     //broadcast a request for everyone to send their vehicles
     std::vector<uint8_t> packet;
     packet.push_back((uint8_t)PacketTypes::CONTAINED_VECHILES_REQUEST);
-    m_Radio.SendMessage(packet);
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
 
 
 MACEDigiMeshWrapper::~MACEDigiMeshWrapper() {
     if(m_NodeName == ""){
-        m_Radio.SetATParameterAsync<ATData::String>("AP", "-");
+        ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::String>("AP", "-");
     }
     m_ShutdownScanThread = true;
     m_ScanThread->join();
@@ -83,7 +87,7 @@ void MACEDigiMeshWrapper::AddVehicle(const int &ID)
     if(m_NodeName == "")
     {
         m_NIMutex.lock();
-        m_Radio.GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
+        ((DigiMeshRadio*)m_Radio)->GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
            ATData::String currNI = currNIarr.at(0) ;
            bool changeMade = false;
            if(currNI == "-") {
@@ -98,7 +102,7 @@ void MACEDigiMeshWrapper::AddVehicle(const int &ID)
            }
 
            if(changeMade == true) {
-               m_Radio.SetATParameterAsync("NI", currNI, [this](){m_NIMutex.unlock();});
+               ((DigiMeshRadio*)m_Radio)->SetATParameterAsync("NI", currNI, [this](){m_NIMutex.unlock();});
            }
         });
     }
@@ -127,7 +131,7 @@ void MACEDigiMeshWrapper::RemoveVehicle(const int &ID)
     if(m_NodeName == "")
     {
         m_NIMutex.lock();
-        m_Radio.GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
+        ((DigiMeshRadio*)m_Radio)->GetATParameterAsync<ATData::String, ShutdownFirstResponse>("NI", [this, ID](const std::vector<ATData::String> &currNIarr) {
            ATData::String currNI = currNIarr.at(0) ;
 
            std::string str_ID = std::to_string(ID);
@@ -140,7 +144,7 @@ void MACEDigiMeshWrapper::RemoveVehicle(const int &ID)
            }
 
            if(currNIarr.at(0) != currNI) {
-               m_Radio.SetATParameterAsync("NI", currNI, [this](){m_NIMutex.unlock();});
+               ((DigiMeshRadio*)m_Radio)->SetATParameterAsync("NI", currNI, [this](){m_NIMutex.unlock();});
            }
         });
     }
@@ -180,19 +184,29 @@ void MACEDigiMeshWrapper::AddHandler_Data(const std::function<void(const std::ve
 
 
 /**
+ * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
+ * @param lambda Lambda function to pass vehicle ID and status code
+ */
+void MACEDigiMeshWrapper::AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+{
+    m_Handlers_VehicleNotReached.push_back(lambda);
+}
+
+
+/**
  * @brief Send data to a vechile
  * @param destVechileID ID of vehicle
  * @param data Data to send
  * @throws std::runtime_error Thrown if no vehicle of given id is known.
  */
-void MACEDigiMeshWrapper::SendData(const int &destVechileID, const std::vector<uint8_t> &data)
+void MACEDigiMeshWrapper::SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
 {
-    if(m_VehicleIDToRadioAddr.find(destVechileID) == m_VehicleIDToRadioAddr.end()) {
+    if(m_VehicleIDToRadioAddr.find(destVehicleID) == m_VehicleIDToRadioAddr.end()) {
         throw std::runtime_error("No known vehicle");
     }
 
     //address to send to
-    uint64_t addr = m_VehicleIDToRadioAddr.at(destVechileID);
+    uint64_t addr = m_VehicleIDToRadioAddr.at(destVehicleID);
     if(addr == 0) {
         Notify<const std::vector<uint8_t>&>(m_Handlers_Data, data);
     }
@@ -203,7 +217,13 @@ void MACEDigiMeshWrapper::SendData(const int &destVechileID, const std::vector<u
         packet.push_back(data.at(i));
     }
 
-    m_Radio.SendMessage(packet, this->m_VehicleIDToRadioAddr[destVechileID]);
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet, this->m_VehicleIDToRadioAddr[destVehicleID], [this, destVehicleID](const ATData::TransmitStatus &status){
+
+        if(status.status != TransmitStatusTypes::SUCCESS)
+        {
+            Notify<int, TransmitStatusTypes>(m_Handlers_VehicleNotReached, destVehicleID, status.status);
+        }
+    });
 }
 
 
@@ -219,7 +239,7 @@ void MACEDigiMeshWrapper::BroadcastData(const std::vector<uint8_t> &data)
         packet.push_back(data.at(i));
     }
 
-    m_Radio.SendMessage(packet);
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
 
 void MACEDigiMeshWrapper::run_scan() {
@@ -228,7 +248,7 @@ void MACEDigiMeshWrapper::run_scan() {
             return;
         }
 
-        std::vector<ATData::NodeDiscovery> nodes = m_Radio.GetATParameterSync<ATData::NodeDiscovery, CollectAfterTimeout>("ND", CollectAfterTimeout(15000));
+        std::vector<ATData::NodeDiscovery> nodes = ((DigiMeshRadio*)m_Radio)->GetATParameterSync<ATData::NodeDiscovery, CollectAfterTimeout>("ND", CollectAfterTimeout(15000));
 
         for(std::vector<ATData::NodeDiscovery>::const_iterator it = nodes.cbegin() ; it != nodes.cend() ; ++it) {
             ATData::NodeDiscovery node = *it;
@@ -270,15 +290,15 @@ void MACEDigiMeshWrapper::run_scan() {
  * @brief Logic to perform upon reception of a message
  * @param msg Message received
  */
-void MACEDigiMeshWrapper::on_message_received(const ATData::Message &msg)
+void MACEDigiMeshWrapper::on_message_received(const std::vector<uint8_t> &msg, uint64_t addr)
 {
-    PacketTypes packetType = (PacketTypes)msg.data.at(0);
+    PacketTypes packetType = (PacketTypes)msg.at(0);
     switch(packetType) {
         case PacketTypes::DATA:
             {
             std::vector<uint8_t> data;
-            for(int i = 1 ; i < msg.data.size() ; i++) {
-                data.push_back(msg.data.at(i));
+            for(int i = 1 ; i < msg.size() ; i++) {
+                data.push_back(msg.at(i));
             }
             Notify<const std::vector<uint8_t>&>(m_Handlers_Data, data);
             break;
@@ -287,9 +307,9 @@ void MACEDigiMeshWrapper::on_message_received(const ATData::Message &msg)
         {
             int vehicleID = 0;
             for(int i = 0 ; i < 4 ; i++) {
-                vehicleID |= (((uint64_t)msg.data[1+i]) << (8*(3-i)));
+                vehicleID |= (((uint64_t)msg[1+i]) << (8*(3-i)));
             }
-            on_new_remote_vehicle(vehicleID, msg.addr);
+            on_new_remote_vehicle(vehicleID, addr);
             break;
         }
         case PacketTypes::CONTAINED_VECHILES_REQUEST:
@@ -303,7 +323,7 @@ void MACEDigiMeshWrapper::on_message_received(const ATData::Message &msg)
         {
             int vehicleID = 0;
             for(int i = 0 ; i < 4 ; i++) {
-                vehicleID |= (((uint64_t)msg.data[1+i]) << (8*(3-i)));
+                vehicleID |= (((uint64_t)msg[1+i]) << (8*(3-i)));
             }
             on_remote_vehicle_removed(vehicleID);
             break;
@@ -361,7 +381,7 @@ void MACEDigiMeshWrapper::send_vehicle_present_message(const int vehicleID)
         uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
         packet.push_back((char)a);
     }
-    m_Radio.SendMessage(packet);
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
 
 void MACEDigiMeshWrapper::send_vehicle_removal_message(const int vehicleID)
@@ -372,7 +392,7 @@ void MACEDigiMeshWrapper::send_vehicle_removal_message(const int vehicleID)
         uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
         packet.push_back((char)a);
     }
-    m_Radio.SendMessage(packet);
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
 
 

@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
 
     Sleep(1000);
 
-    wrapper1->RemoveVehicle(1);
-    wrapper2->RemoveVehicle(2);
+    //wrapper1->RemoveVehicle(1);
+    //wrapper2->RemoveVehicle(2);
 
 
 

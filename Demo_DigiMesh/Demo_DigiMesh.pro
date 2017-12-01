@@ -16,3 +16,6 @@ else:unix: LIBS += -L$$OUT_PWD/../DigiMesh/ -lDigiMesh
 
 INCLUDEPATH += $$PWD/../DigiMesh
 DEPENDPATH += $$PWD/../DigiMesh
+
+INCLUDEPATH += $$PWD/../common
+DEPENDPATH += $$PWD/../common

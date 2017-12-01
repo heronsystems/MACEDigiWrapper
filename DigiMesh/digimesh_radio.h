@@ -149,20 +149,36 @@ public:
         AT_command_helper(parameterName, frameBehavior, data);
     }
 
-    void SendMessage(const std::vector<uint8_t> &data, const std::function<void(const ATData::TransmitStatus &)> &callback = [](const ATData::TransmitStatus &){})
-    {
-        SendMessage(data, BROADCAST_ADDRESS, callback);
-    }
-
-    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr, const std::function<void(const ATData::TransmitStatus &)> &callback = [](const ATData::TransmitStatus &){})
+    void SendMessage(const std::vector<uint8_t> &data)
     {
         std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> frameBehavior = std::make_shared<FramePersistanceBehavior<ShutdownFirstResponse>>(ShutdownFirstResponse());
-        ((FramePersistanceBehavior<>*)frameBehavior.get())->setCallback<ATData::TransmitStatus>([&callback](const std::vector<ATData::TransmitStatus> &arr)
+        construct_message(data, BROADCAST_ADDRESS, frameBehavior);
+    }
+
+    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr)
+    {
+        std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> frameBehavior = std::make_shared<FramePersistanceBehavior<ShutdownFirstResponse>>(ShutdownFirstResponse());
+        construct_message(data, addr, frameBehavior);
+    }
+
+    void SendMessage(const std::vector<uint8_t> &data, const uint64_t &addr, const std::function<void(const ATData::TransmitStatus &)> &callback)
+    {
+        std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> frameBehavior = std::make_shared<FramePersistanceBehavior<ShutdownFirstResponse>>(ShutdownFirstResponse());
+        ((FramePersistanceBehavior<>*)frameBehavior.get())->setCallback<ATData::TransmitStatus>([callback](const std::vector<ATData::TransmitStatus> &arr)
         {
             callback(arr.at(0));
         });
 
+        construct_message(data, addr, frameBehavior);
+    }
 
+
+
+private:
+
+
+    void construct_message(const std::vector<uint8_t> &data, const uint64_t &addr, const std::shared_ptr<FramePersistanceBehavior<ShutdownFirstResponse>> &frameBehavior)
+    {
         int packet_length = 14 + data.size();
         int total_length = packet_length+4;
         char *tx_buf = new char[total_length];
@@ -192,10 +208,6 @@ public:
             delete[] tx_buf;
         });
     }
-
-
-
-private:
 
     virtual void ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer);
 

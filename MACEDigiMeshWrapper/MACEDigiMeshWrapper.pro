@@ -46,3 +46,7 @@ export(first.depends)
 export(copydata.commands)
 export(copydata2.commands)
 QMAKE_EXTRA_TARGETS += first copydata copydata2
+
+
+INCLUDEPATH += $$PWD/../common
+DEPENDPATH += $$PWD/../common

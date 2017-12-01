@@ -43,7 +43,6 @@ HEADERS += \
     frame-persistance/types/index.h \
     frame-persistance/types/shutdown-first-response.h \
     callback.h \
-    digi_mesh_baud_rates.h \
     DigiMesh_global.h \
     digimesh_radio.h \
     i_link_events.h \
@@ -59,3 +58,6 @@ first.depends = $(first) copydata
 export(first.depends)
 export(copydata.commands)
 QMAKE_EXTRA_TARGETS += first copydata
+
+INCLUDEPATH += $$PWD/../common
+DEPENDPATH += $$PWD/../common

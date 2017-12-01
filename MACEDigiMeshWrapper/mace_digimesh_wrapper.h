@@ -8,9 +8,11 @@
 #include <unordered_map>
 #include <vector>
 #include <stdint.h>
+#include <mutex>
+#include <thread>
 
 #include "digi_mesh_baud_rates.h"
-#include "digimesh_radio.h"
+#include "transmit_status_types.h"
 
 /**
  * @brief The MACEDigiMeshWrapper class
@@ -45,7 +47,7 @@ private:
 
     static const char NI_NAME_VEHICLE_DELIMETER = '|';
 
-    DigiMeshRadio m_Radio;
+    void* m_Radio;
 
     std::vector<int> m_ContainedVehicles;
     std::unordered_map<int, uint64_t> m_VehicleIDToRadioAddr;
@@ -59,6 +61,7 @@ private:
     std::vector<std::function<void(int, uint64_t)>> m_Handlers_NewRemoteVehicle;
     std::vector<std::function<void(const std::vector<uint8_t>&)>> m_Handlers_Data;
     std::vector<std::function<void(int)>> m_Handlers_RemoteVehicleRemoved;
+    std::vector<std::function<void(int, TransmitStatusTypes)>> m_Handlers_VehicleNotReached;
 
     std::string m_NodeName;
 
@@ -116,12 +119,19 @@ public:
 
 
     /**
+     * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
+     * @param lambda Lambda function to pass vehicle ID and status code
+     */
+    void AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda);
+
+
+    /**
      * @brief Send data to a vechile
      * @param destVechileID ID of vehicle
      * @param data Data to send
      * @throws std::runtime_error Thrown if no vehicle of given id is known.
      */
-    void SendData(const int &destVechileID, const std::vector<uint8_t> &data);
+    void SendData(const int &destVehicleID, const std::vector<uint8_t> &data);
 
 
     /**
@@ -140,7 +150,7 @@ private:
      * @brief Logic to perform upon reception of a message
      * @param msg Message received
      */
-    void on_message_received(const ATData::Message &msg);
+    void on_message_received(const std::vector<uint8_t> &msg, uint64_t addr);
 
 
     /**

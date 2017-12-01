@@ -19,3 +19,6 @@ else:unix: LIBS += -L$$OUT_PWD/../MACEDigiMeshWrapper/ -lMACEDigiMeshWrapper
 
 INCLUDEPATH += $$PWD/../MACEDigiMeshWrapper
 DEPENDPATH += $$PWD/../MACEDigiMeshWrapper
+
+INCLUDEPATH += $$PWD/../common
+DEPENDPATH += $$PWD/../common
