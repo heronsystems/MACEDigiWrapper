@@ -22,6 +22,13 @@ void InteropComponent::AddComponentItem(const char* component, const int ID)
 }
 
 
+void InteropComponent::RemoveComponentItem(const char* component, const int ID)
+{
+    GetComponent(component)->RemoveInternalItem(ID);
+    send_item_remove_message(component, ID);
+}
+
+
 /**
  * @brief Add handler to be called when a new vehicle is added to the network
  * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
@@ -77,7 +84,10 @@ void InteropComponent::SendData(const char* component, const int &destVehicleID,
 
         if(status != TransmitStatusTypes::SUCCESS)
         {
-            Notify<int, TransmitStatusTypes>(m_Handlers_VehicleNotReached.at(component), destVehicleID, status);
+            if(m_Handlers_VehicleNotReached.find(component) != m_Handlers_VehicleNotReached.cend())
+            {
+                Notify<int, TransmitStatusTypes>(m_Handlers_VehicleNotReached.at(component), destVehicleID, status);
+            }
         }
     });
 }
@@ -86,12 +96,22 @@ void InteropComponent::SendData(const char* component, const int &destVehicleID,
 
 void InteropComponent::onNewRemoteComponentItem(const char* name, int ID, uint64_t addr)
 {
-    GetComponent(name)->AddExternalItem(ID, addr);
+    if(GetComponent(name)->AddExternalItem(ID, addr) == true)
+    {
+        if(m_Handlers_NewRemoteVehicle.find(name) != m_Handlers_NewRemoteVehicle.cend())
+        {
+            Notify<int, uint64_t>(m_Handlers_NewRemoteVehicle.at(name), ID, addr);
+        }
+    }
 }
 
 void InteropComponent::onRemovedRemoteComponentItem(const char* name, int ID)
 {
-    GetComponent(name)->RemoveItem(ID);
+    GetComponent(name)->RemoveExternalItem(ID);
+    if(m_Handlers_RemoteVehicleRemoved.find(name) != m_Handlers_RemoteVehicleRemoved.cend())
+    {
+        Notify<int>(m_Handlers_RemoteVehicleRemoved.at(name), ID);
+    }
 }
 
 std::vector<int> InteropComponent::RetrieveComponentItems(const char* name)

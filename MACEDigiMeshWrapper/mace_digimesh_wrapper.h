@@ -82,6 +82,12 @@ public:
         InteropComponent::AddComponentItem(T, ID);
     }
 
+    template <const char* T>
+    void RemoveComponentItem(const int ID)
+    {
+        InteropComponent::RemoveComponentItem(T, ID);
+    }
+
 
     /**
      * @brief Add handler to be called when a new vehicle is added to the network

@@ -66,9 +66,35 @@ public:
     }
 
 
-    void RemoveItem(int vehicleID)
+    void RemoveInternalItem(int vehicleID)
     {
-        throw std::runtime_error("Not Implimented");
+        if(m_VehicleIDToRadioAddr.find(vehicleID) == m_VehicleIDToRadioAddr.cend()){
+            return;
+        }
+
+        m_VehicleIDMutex.lock();
+        m_VehicleIDToRadioAddr.erase(m_VehicleIDToRadioAddr.find(vehicleID));
+        m_VehicleIDMutex.unlock();
+
+        for(auto it = m_ContainedVehicles.cbegin() ; it != m_ContainedVehicles.cend() ; ++it)
+        {
+            if(*it == vehicleID)
+            {
+                m_ContainedVehicles.erase(it);
+                break;
+            }
+        }
+    }
+
+    void RemoveExternalItem(int vehicleID)
+    {
+        if(m_VehicleIDToRadioAddr.find(vehicleID) == m_VehicleIDToRadioAddr.cend()){
+            return;
+        }
+
+        m_VehicleIDMutex.lock();
+        m_VehicleIDToRadioAddr.erase(m_VehicleIDToRadioAddr.find(vehicleID));
+        m_VehicleIDMutex.unlock();
     }
 };
 

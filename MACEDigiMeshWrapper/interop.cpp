@@ -191,3 +191,25 @@ void Interop::send_item_present_message(const char *componentName, const int veh
     }
     ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
+
+
+void Interop::send_item_remove_message(const char *componentName, const int vehicleID)
+{
+    std::vector<uint8_t> packet;
+    packet.push_back((uint8_t)PacketTypes::REMOVE_COMPONENT_ITEM);
+
+    size_t pos = 0;
+    do
+    {
+        packet.push_back(componentName[pos]);
+        pos++;
+    }
+    while(componentName[pos] != '\0');
+    packet.push_back('\0');
+
+    for(size_t i = 0 ; i < 4 ; i++) {
+        uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
+        packet.push_back((char)a);
+    }
+    ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
+}

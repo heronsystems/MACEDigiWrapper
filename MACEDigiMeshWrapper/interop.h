@@ -107,6 +107,8 @@ protected:
 
     void send_item_present_message(const char *componentName, const int vehicleID);
 
+    void send_item_remove_message(const char *componentName, const int vehicleID);
+
 };
 
 #endif // MACE_DIGIMESH_INTEROP_H

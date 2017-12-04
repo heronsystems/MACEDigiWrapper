@@ -33,6 +33,9 @@ protected:
     void AddComponentItem(const char* component, const int ID);
 
 
+    void RemoveComponentItem(const char* component, const int ID);
+
+
     /**
      * @brief Add handler to be called when a new vehicle is added to the network
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
