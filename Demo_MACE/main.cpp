@@ -38,8 +38,8 @@ int main(int argc, char *argv[])
         printf("%s\n New Data Received\n\n", RADIO2);
     });
 
-    wrapper1->AddElement<VEHICLE>(1);
-    wrapper2->AddElement<VEHICLE>(2);
+    wrapper1->AddComponentItem<VEHICLE>(1);
+    wrapper2->AddComponentItem<VEHICLE>(2);
 
     Sleep(7000);
 
