@@ -4,7 +4,7 @@
 #include "mace_digimesh_wrapper.h"
 
 
-char VEHICLE[] = "Vehicle";
+extern char VEHICLE[] = "Vehicle";
 
 
 int main(int argc, char *argv[])

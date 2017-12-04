@@ -30,7 +30,6 @@ SOURCES += \
 HEADERS +=\
         macewrapper_global.h \
     mace_digimesh_wrapper.h \
-    mace_digimesh_wrapper.hpp \
     component.h \
     interop_component.h \
     interop.h
