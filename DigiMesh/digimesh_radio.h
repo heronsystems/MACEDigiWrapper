@@ -182,7 +182,12 @@ private:
         int packet_length = 14 + data.size();
         int total_length = packet_length+4;
         char *tx_buf = new char[total_length];
-        int frame_id = reserve_next_frame_id();
+
+        int frame_id = 0;
+        if(frameBehavior->HasCallback())
+        {
+            frame_id = reserve_next_frame_id();
+        }
 
         tx_buf[0] = START_BYTE;
         tx_buf[1] = (packet_length >> 8) & 0xFF;
@@ -201,7 +206,13 @@ private:
             tx_buf[17+i] = data.at(i);
         }
         tx_buf[total_length-1] = MathHelper::calc_checksum(tx_buf, 3, total_length-1);
+
+        frameBehavior->setFinishBehavior([this, frame_id](){
+            m_CurrentFrames[frame_id].inUse = false;
+        });
+
         m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id, frameBehavior](){
+            printf("%d\n", frame_id);
             m_CurrentFrames[frame_id].framePersistance = frameBehavior;
             m_Link->WriteBytes(tx_buf, total_length);
 
@@ -247,6 +258,10 @@ private:
         }
 
         tx_buf[7 + param_len] = MathHelper::calc_checksum<char>(tx_buf, 3, 8 + param_len-1);
+
+        frameBehavior->setFinishBehavior([this, frame_id](){
+            m_CurrentFrames[frame_id].inUse = false;
+        });
 
         //console.log(tx_buf.toString('hex').replace(/(.{2})/g, "$1 "));
         m_Link->MarshalOnThread([this, tx_buf, param_len, frame_id, frameBehavior](){

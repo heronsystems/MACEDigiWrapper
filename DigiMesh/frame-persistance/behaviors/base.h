@@ -15,12 +15,15 @@ class FramePersistanceBehavior<>
 {
     std::shared_ptr<std::function<void()>> m_SendFramesUp;
     std::shared_ptr<std::function<void(const std::vector<uint8_t> &data)>> m_NewFrame;
+    bool m_DoneBehaviorSet;
+    std::function<void()> m_DoneBehavior;
 
 public:
 
     FramePersistanceBehavior() :
         m_NewFrame(NULL),
-        m_SendFramesUp(NULL)
+        m_SendFramesUp(NULL),
+        m_DoneBehaviorSet(false)
     {
     }
 
@@ -33,11 +36,16 @@ public:
         return true;
     }
 
+
     void AddFrameReturn(int frame_id, const std::vector<uint8_t> &data) {
         (*m_NewFrame)(data);
     }
 
     void SendAndFinish() {
+        if(m_DoneBehaviorSet)
+        {
+            m_DoneBehavior();
+        }
         (*m_SendFramesUp)();
         m_SendFramesUp = NULL;
         m_NewFrame = NULL;
@@ -56,6 +64,11 @@ public:
         m_SendFramesUp = std::make_shared<std::function<void()>>([callback, vec](){
             callback(*vec);
         });
+    }
+
+    void setFinishBehavior(const std::function<void()> &cb) {
+        m_DoneBehaviorSet = true;
+        m_DoneBehavior = cb;
     }
 
     virtual void FrameReceived() = 0;
