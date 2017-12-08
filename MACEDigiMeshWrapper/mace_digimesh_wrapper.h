@@ -94,9 +94,9 @@ public:
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
      */
     template <const char* T>
-    void AddHandler_NewRemoteVehicle(const std::function<void(int, uint64_t)> &lambda)
+    void AddHandler_NewRemoteComponentItem(const std::function<void(int, uint64_t)> &lambda)
     {
-        InteropComponent::AddHandler_NewRemoteVehicle(T, lambda);
+        InteropComponent::AddHandler_NewRemoteComponetItem(T, lambda);
     }
 
 
@@ -105,9 +105,9 @@ public:
      * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
      */
     template <const char* T>
-    void AddHandler_RemoteVehicleRemoved(const std::function<void(int)> &lambda)
+    void AddHandler_RemovedRemoteComponentItem(const std::function<void(int)> &lambda)
     {
-        InteropComponent::AddHandler_RemoteVehicleRemoved(T, lambda);
+        InteropComponent::AddHandler_RemoteComponentItemRemoved(T, lambda);
     }
 
 
@@ -116,9 +116,9 @@ public:
      * @param lambda Lambda function to pass vehicle ID and status code
      */
     template <const char* T>
-    void AddHandler_VehicleTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+    void AddHandler_ComponentItemTransmitError(const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
     {
-        InteropComponent::AddHandler_VehicleTransmitError(T, lambda);
+        InteropComponent::AddHandler_ComponentItemTransmitError(T, lambda);
     }
 
 

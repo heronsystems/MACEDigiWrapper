@@ -212,7 +212,6 @@ private:
         });
 
         m_Link->MarshalOnThread([this, tx_buf, total_length, frame_id, frameBehavior](){
-            printf("%d\n", frame_id);
             m_CurrentFrames[frame_id].framePersistance = frameBehavior;
             m_Link->WriteBytes(tx_buf, total_length);
 

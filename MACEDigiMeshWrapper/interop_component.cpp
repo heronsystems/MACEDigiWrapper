@@ -33,7 +33,7 @@ void InteropComponent::RemoveComponentItem(const char* component, const int ID)
  * @brief Add handler to be called when a new vehicle is added to the network
  * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
  */
-void InteropComponent::AddHandler_NewRemoteVehicle(const char* component, const std::function<void(int, uint64_t)> &lambda)
+void InteropComponent::AddHandler_NewRemoteComponetItem(const char* component, const std::function<void(int, uint64_t)> &lambda)
 {
     if(m_Handlers_NewRemoteVehicle.find(component) == m_Handlers_NewRemoteVehicle.cend()) {
         m_Handlers_NewRemoteVehicle.insert({component, {}});
@@ -46,7 +46,7 @@ void InteropComponent::AddHandler_NewRemoteVehicle(const char* component, const 
  * @brief Add handler to be called when a new vehicle has been removed from the network
  * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
  */
-void InteropComponent::AddHandler_RemoteVehicleRemoved(const char* component, const std::function<void(int)> &lambda)
+void InteropComponent::AddHandler_RemoteComponentItemRemoved(const char* component, const std::function<void(int)> &lambda)
 {
     if(m_Handlers_RemoteVehicleRemoved.find(component) == m_Handlers_RemoteVehicleRemoved.cend()) {
         m_Handlers_RemoteVehicleRemoved.insert({component, {}});
@@ -59,7 +59,7 @@ void InteropComponent::AddHandler_RemoteVehicleRemoved(const char* component, co
  * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
  * @param lambda Lambda function to pass vehicle ID and status code
  */
-void InteropComponent::AddHandler_VehicleTransmitError(const char* component, const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+void InteropComponent::AddHandler_ComponentItemTransmitError(const char* component, const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
 {
     if(m_Handlers_VehicleNotReached.find(component) == m_Handlers_VehicleNotReached.cend()) {
         m_Handlers_VehicleNotReached.insert({component, {}});
