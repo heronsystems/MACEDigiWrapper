@@ -51,8 +51,8 @@ int main(int argc, char *argv[])
     Sleep(7000);
 
     while(true) {
-        //wrapper1->SendData<VEHICLE>(2, {0x1, 0x2, 0x3});
-        wrapper2->BroadcastData({0x1, 0x2, 0x3});
+        wrapper1->SendData<VEHICLE>(2, {0x1, 0x2, 0x3});
+        //wrapper2->BroadcastData({0x1, 0x2, 0x3});
         Sleep(100);
     }
 

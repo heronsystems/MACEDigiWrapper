@@ -188,7 +188,7 @@ int DigiMeshRadio::reserve_next_frame_id()
 
         //wrap around
         if (framePrediction > CALLBACK_QUEUE_SIZE-1){
-            framePrediction = 0;
+            framePrediction = 1;
         }
 
         // if we've gone all the way around, then we can't send
