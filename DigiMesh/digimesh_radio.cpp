@@ -61,16 +61,22 @@ void DigiMeshRadio::SetNewDataCallback(std::function<void(const std::vector<uint
 void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t> &buffer)
 {
     //add what we received to the current buffer.
+
+    m_CurrBuffMutex.lock();
     for(size_t i = 0 ; i < buffer.size() ; i++) {
         m_CurrBuf.push_back(buffer.at(i));
     }
+    m_CurrBuffMutex.unlock();
 
 
     //start infinite loop to pick up multiple packets sent at same time
     while(true) {
 
+        m_CurrBuffMutex.lock();
+
         //if there aren't three bytes received we have to wait more
         if(m_CurrBuf.size() < 3) {
+            m_CurrBuffMutex.unlock();
             break;
         }
 
@@ -79,6 +85,7 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
 
         //if we have received part of the packet, but not entire thing then we need to wait longer
         if(m_CurrBuf.size() < packet_length) {
+            m_CurrBuffMutex.unlock();
             return;
         }
 
@@ -87,6 +94,8 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
             std::make_move_iterator(m_CurrBuf.begin() + 3),
             std::make_move_iterator(m_CurrBuf.begin() + packet_length - 1));
         m_CurrBuf.erase(m_CurrBuf.begin(), m_CurrBuf.begin() + packet_length);
+
+        m_CurrBuffMutex.unlock();
 
         switch(packet[0])
         {
@@ -104,7 +113,7 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
                 handle_receive_packet(packet);
                 break;
             default:
-                throw std::runtime_error("unknown packet type received: " + packet[0]);
+                throw std::runtime_error("unknown packet type received: " + std::to_string(packet[0]));
         }
 
 

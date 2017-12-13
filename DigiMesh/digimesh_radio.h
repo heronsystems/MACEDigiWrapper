@@ -56,6 +56,7 @@ private:
     std::mutex m_FrameSelectionMutex;
 
     std::vector<uint8_t> m_CurrBuf;
+    std::mutex m_CurrBuffMutex;
 
     std::vector<std::function<void(const ATData::Message&)>> m_MessageHandlers;
 

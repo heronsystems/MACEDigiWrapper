@@ -43,14 +43,24 @@ INCLUDEPATH += $$PWD/../DigiMesh
 DEPENDPATH += $$PWD/../DigiMesh
 
 
-copydata.commands = $(MKDIR) $$PWD/../include ; $(COPY_DIR) $$PWD/*.h $$PWD/../include/
-win32:CONFIG(release, debug|release):       copydata2.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) release/*.dll $$PWD/../lib/
-else:win32:CONFIG(debug, debug|release):    copydata2.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) $$OUT_PWD/debug/*.dll $$PWD/../lib/
-first.depends = $(first) copydata copydata2
-export(first.depends)
-export(copydata.commands)
-export(copydata2.commands)
-QMAKE_EXTRA_TARGETS += first copydata copydata2
+#copydata.commands = $(MKDIR) $$PWD/../include ; $(COPY_DIR) $$PWD/*.h $$PWD/../include/
+#win32:CONFIG(release, debug|release):       copydata2.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) release/*.dll $$PWD/../lib/
+#else:win32:CONFIG(debug, debug|release):    copydata2.commands   = $(MKDIR) $$PWD/../lib ; $(COPY_DIR) $$OUT_PWD/debug/*.dll $$PWD/../lib/
+#first.depends = $(first) copydata copydata2
+#export(first.depends)
+#export(copydata.commands)
+#export(copydata2.commands)
+#QMAKE_EXTRA_TARGETS += first copydata copydata2
+
+
+lib.path    = $$PWD/../lib
+win32:CONFIG(release, debug|release):       lib.files   += release/MACEDigiMeshWrapper.lib release/MACEDigiMeshWrapper.dll
+else:win32:CONFIG(debug, debug|release):    lib.files   += debug/MACEDigiMeshWrapper.lib debug/MACEDigiMeshWrapper.dll
+INSTALLS += lib
+
+headers.path    = $$PWD/../include
+headers.files   += $$HEADERS
+INSTALLS       += headers
 
 
 INCLUDEPATH += $$PWD/../common

@@ -30,8 +30,12 @@ HEADERS += \
     discovery_status_types.h
 
 
-copydata.commands = $(MKDIR) $$PWD/../include ; $(COPY_DIR) $$PWD/*.h $$PWD/../include/
-first.depends = $(first) copydata
-export(first.depends)
-export(copydata.commands)
-QMAKE_EXTRA_TARGETS += first copydata
+#copydata.commands = $(MKDIR) $$PWD/../include ; $(COPY_DIR) $$PWD/*.h $$PWD/../include/
+#first.depends = $(first) copydata
+#export(first.depends)
+#export(copydata.commands)
+#QMAKE_EXTRA_TARGETS += first copydata
+
+headers.path    = $$PWD/../include
+headers.files   += $$HEADERS
+INSTALLS       += headers
