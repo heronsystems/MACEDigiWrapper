@@ -96,7 +96,7 @@ public:
     template <const char* T>
     void AddHandler_NewRemoteComponentItem(const std::function<void(int, uint64_t)> &lambda)
     {
-        InteropComponent::AddHandler_NewRemoteComponetItem(T, lambda);
+        InteropComponent::AddHandler_NewRemoteComponentItem(T, lambda);
     }
 
 

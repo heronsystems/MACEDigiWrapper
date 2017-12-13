@@ -40,7 +40,7 @@ protected:
      * @brief Add handler to be called when a new vehicle is added to the network
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
      */
-    void AddHandler_NewRemoteComponetItem(const char* component, const std::function<void(int, uint64_t)> &lambda);
+    void AddHandler_NewRemoteComponentItem(const char* component, const std::function<void(int, uint64_t)> &lambda);
 
 
     /**

@@ -33,7 +33,7 @@ void InteropComponent::RemoveComponentItem(const char* component, const int ID)
  * @brief Add handler to be called when a new vehicle is added to the network
  * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
  */
-void InteropComponent::AddHandler_NewRemoteComponetItem(const char* component, const std::function<void(int, uint64_t)> &lambda)
+void InteropComponent::AddHandler_NewRemoteComponentItem(const char* component, const std::function<void(int, uint64_t)> &lambda)
 {
     if(m_Handlers_NewRemoteVehicle.find(component) == m_Handlers_NewRemoteVehicle.cend()) {
         m_Handlers_NewRemoteVehicle.insert({component, {}});

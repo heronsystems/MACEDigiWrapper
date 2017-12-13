@@ -101,12 +101,16 @@ int main(int argc, char *argv[])
     //auto message = (ATData::String("Hi")).Serialize();
     //wrapper1.SendMessage(message);
 
-    //wrapper1.SendMessage({3});
-    //wrapper2.SendMessage({3});
+    wrapper1.SendMessage({3});
+    wrapper2.SendMessage({3});
 
+
+    /*
     wrapper2.SendMessage({2,0,0,0,1}, 0x31565218, [](const ATData::TransmitStatus &transmitStatus){
         printf("Error! 0x%x", transmitStatus.status);
     });
+    */
+
 
     while(true) {
 
