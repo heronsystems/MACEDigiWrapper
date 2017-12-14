@@ -80,6 +80,15 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
             break;
         }
 
+
+        if(m_CurrBuf.at(0) != 0x7E) {
+            m_CurrBuf.erase(m_CurrBuf.begin());
+            m_CurrBuffMutex.unlock();
+            continue;
+        }
+
+
+
         // add 4 bytes for start, length, and checksum
         uint8_t packet_length = (m_CurrBuf[1]<<8 |m_CurrBuf[2]) + 4;
 
