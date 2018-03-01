@@ -11,8 +11,8 @@ int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
 
-    const char* RADIO1 = "COM4";
-    const char* RADIO2 = "COM5";
+    const char* RADIO1 = "/dev/ttyUSB0";
+    const char* RADIO2 = "/dev/ttyUSB1";
 
 
     DigiMeshRadio wrapper1(RADIO1, DigiMeshBaudRates::Baud9600);
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     SetATAndSetNI(wrapper1, RADIO1, "AA");
     SetATAndSetNI(wrapper2, RADIO2, "BB");
 
-    /*
+
 
     wrapper1.SetATParameterAsync<ATData::String>("NI", "1");
     wrapper1.GetATParameterAsync<ATData::String>("NI", [RADIO1](const std::vector<ATData::String> &a){
@@ -77,7 +77,6 @@ int main(int argc, char *argv[])
             printf("%s Ni: %s\n", RADIO2, a[0].c_str());
         }
     }, ShutdownFirstResponse());
-    */
 
 
 

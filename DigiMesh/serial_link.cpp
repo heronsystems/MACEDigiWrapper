@@ -75,10 +75,9 @@ void SerialLink::RequestReset()
 
 void SerialLink::WriteBytes(const char *bytes, int length)
 {
-    QByteArray data(bytes, length);
     if(m_port && m_port->isOpen()) {
         //_logOutputDataRate(data.size(), QDateTime::currentMSecsSinceEpoch());
-        m_port->write(data);
+        m_port->write(bytes, length);
     } else {
         // Error occured
         _emitLinkError("Could not send data - link " + getPortName() + " is disconnected!");
@@ -178,6 +177,19 @@ bool SerialLink::_hardwareConnect(QSerialPort::SerialPortError& error, QString& 
 
     m_port = new QSerialPort(QString::fromStdString(_config.portName()).trimmed());
 
+    m_ListenThread = new AppThread(10, [&](){
+        try
+        {
+            this->PortEventLoop();
+        }
+        catch(std::runtime_error e) {
+            printf("Error: %s\n", e.what());
+            throw e;
+        }
+
+    });
+
+
 
     //  port->setCommTimeouts(QSerialPort::CtScheme_NonBlockingRead);
 
@@ -203,6 +215,8 @@ bool SerialLink::_hardwareConnect(QSerialPort::SerialPortError& error, QString& 
         return false; // couldn't open serial port
     }
 
+    m_port->moveToThread(m_ListenThread);
+
     std::cout << "Configuring port" << std::endl;
 
     m_port->setBaudRate     ((int)_config.baud());
@@ -216,18 +230,7 @@ bool SerialLink::_hardwareConnect(QSerialPort::SerialPortError& error, QString& 
 
 
 
-    m_ListenThread = new AppThread(10, [&](){
-        try
-        {
-            this->PortEventLoop();
-        }
-        catch(std::runtime_error e) {
-            printf("Error: %s\n", e.what());
-            throw e;
-        }
 
-    });
-    m_port->moveToThread(m_ListenThread);
     m_ListenThread->start();
 
 
@@ -304,14 +307,24 @@ void SerialLink::linkError(QSerialPort::SerialPortError error)
 
 void SerialLink::PortEventLoop()
 {
-    if(m_port->bytesAvailable())
-        this->_readBytes();
-
-
-
-    if(m_port->errorString() != "")
+    try
     {
-        linkError(m_port->error());
+        if(m_port->bytesAvailable())
+            this->_readBytes();
+
+
+
+        if(m_port->errorString() != "")
+        {
+            linkError(m_port->error());
+        }
+    }
+    catch(const std::exception &e)
+    {
+        std::cout << "Exception in Qt Event Loop!" << std::endl;
+        std::cout << "Type:    " << typeid(e).name()  << std::endl;
+        std::cout << "Message: " << e.what() << std::endl;
+        throw e;
     }
 }
 

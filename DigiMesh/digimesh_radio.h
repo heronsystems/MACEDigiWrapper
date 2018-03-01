@@ -27,6 +27,7 @@
 #define FRAME_REMOTE_AT_COMMAND 0x17
 #define FRAME_REMOTE_AT_COMMAND_RESPONSE 0x97
 #define FRAME_MODEM_STATUS 0x8a
+#define LEGACY_TX_STATUS 0x89
 #define FRAME_TRANSMIT_REQUEST 0x10
 #define FRAME_TRANSMIT_STATUS 0x8b
 #define FRAME_RECEIVE_PACKET 0x90
@@ -277,6 +278,8 @@ private:
     void handle_AT_command_response(const std::vector<uint8_t> &buff);
 
     void handle_transmit_status(const std::vector<uint8_t> &data);
+
+    void handle_legacy_transmit_status(const std::vector<uint8_t> &data);
 
     void handle_receive_packet(const std::vector<uint8_t> &);
 

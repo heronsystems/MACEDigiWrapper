@@ -123,7 +123,7 @@ public:
 
 
     template <const char* T>
-    SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
+    void SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
     {
         InteropComponent::SendData(T, destVehicleID, data);
     }

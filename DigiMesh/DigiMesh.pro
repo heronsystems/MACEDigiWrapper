@@ -60,6 +60,12 @@ HEADERS += \
 #QMAKE_EXTRA_TARGETS += first copydata
 
 
+# Unix lib Install
+unix:!symbian {
+    target.path = $$PWD/../lib
+    INSTALLS += target
+}
+
 lib.path    = $$PWD/../lib
 win32:CONFIG(release, debug|release):       lib.files   += release/DigiMesh.lib release/DigiMesh.dll
 else:win32:CONFIG(debug, debug|release):    lib.files   += debug/DigiMesh.lib debug/DigiMesh.dll

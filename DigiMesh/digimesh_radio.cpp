@@ -118,6 +118,9 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
             case FRAME_TRANSMIT_STATUS:
                 handle_transmit_status(packet);
                 break;
+            case LEGACY_TX_STATUS:
+                handle_legacy_transmit_status(packet);
+            break;
             case FRAME_RECEIVE_PACKET:
                 handle_receive_packet(packet);
                 break;
@@ -182,6 +185,15 @@ void DigiMeshRadio::handle_transmit_status(const std::vector<uint8_t> &data)
 {
     uint8_t frame_id = data[1];
     find_and_invokve_frame(frame_id, data);
+}
+
+void DigiMeshRadio::handle_legacy_transmit_status(const std::vector<uint8_t> &data)
+{
+    printf("!!!!! LEGACY TRANSMIT STATUS SEEN");
+    if(data[2] == 0x74)
+    {
+        printf(" PAYLOAD TOO LARGE !!!!\n");
+    }
 }
 
 

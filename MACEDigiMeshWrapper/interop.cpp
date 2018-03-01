@@ -17,13 +17,16 @@ Interop::Interop(const std::string &port, DigiMeshBaudRates rate, const std::str
     m_Radio = new DigiMeshRadio(port, rate);
 
     m_NIMutex.lock();
-    ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1), [this](){
-        ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::String>("NI", m_NodeName.c_str(), [this](){
-            m_NIMutex.unlock();
+    if(m_NodeName != "")
+    {
+        ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::Integer<uint8_t>>("AP", ATData::Integer<uint8_t>(1), [this](){
+            ((DigiMeshRadio*)m_Radio)->SetATParameterAsync<ATData::String>("NI", m_NodeName.c_str(), [this](){
+                m_NIMutex.unlock();
+            });
+
+
         });
-
-
-    });
+    }
 
     ((DigiMeshRadio*)m_Radio)->AddMessageHandler([this](const ATData::Message &a){this->on_message_received(a.data, a.addr);});
 }

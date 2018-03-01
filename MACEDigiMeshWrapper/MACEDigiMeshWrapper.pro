@@ -52,6 +52,11 @@ DEPENDPATH += $$PWD/../DigiMesh
 #export(copydata2.commands)
 #QMAKE_EXTRA_TARGETS += first copydata copydata2
 
+# Unix lib Install
+unix:!symbian {
+    target.path = $$PWD/../lib
+    INSTALLS += target
+}
 
 lib.path    = $$PWD/../lib
 win32:CONFIG(release, debug|release):       lib.files   += release/MACEDigiMeshWrapper.lib release/MACEDigiMeshWrapper.dll
