@@ -66,7 +66,6 @@ public:
         InteropComponent(port, rate, nameOfNode, scanForNodes)
     {
 
-
         //broadcast a request for everyone to send their Elements
         variadicExpand<A...>([this](const char* element) {
 
@@ -126,6 +125,57 @@ public:
     void SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
     {
         InteropComponent::SendData(T, destVehicleID, data);
+    }
+
+
+
+
+
+
+    void AddComponentItem(const char* str, const int ID)
+    {
+        InteropComponent::AddComponentItem(str, ID);
+    }
+
+    void RemoveComponentItem(const char* str, const int ID)
+    {
+        InteropComponent::RemoveComponentItem(str, ID);
+    }
+
+
+    /**
+     * @brief Add handler to be called when a new vehicle is added to the network
+     * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
+     */
+    void AddHandler_NewRemoteComponentItem_Generic(const std::function<void(const char* componentName, int, uint64_t)> &lambda)
+    {
+        InteropComponent::AddHandler_NewRemoteComponentItem_Generic(lambda);
+    }
+
+
+    /**
+     * @brief Add handler to be called when a new vehicle has been removed from the network
+     * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
+     */
+    void AddHandler_RemovedRemoteComponentItem_Generic(const std::function<void(const char* componentName, int)> &lambda)
+    {
+        InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(lambda);
+    }
+
+
+    /**
+     * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
+     * @param lambda Lambda function to pass vehicle ID and status code
+     */
+    void AddHandler_ComponentItemTransmitError_Generic(const std::function<void(const char* componentName, int vehicle, TransmitStatusTypes status)> &lambda)
+    {
+        InteropComponent::AddHandler_ComponentItemTransmitError_Generic(lambda);
+    }
+
+
+    void SendData(const char* str, const int &destVehicleID, const std::vector<uint8_t> &data)
+    {
+        InteropComponent::SendData(str, destVehicleID, data);
     }
 
 

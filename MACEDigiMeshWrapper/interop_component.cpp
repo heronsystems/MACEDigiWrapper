@@ -68,6 +68,37 @@ void InteropComponent::AddHandler_ComponentItemTransmitError(const char* compone
 }
 
 
+
+/**
+ * @brief Add handler to be called when a new vehicle is added to the network
+ * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
+ */
+void InteropComponent::AddHandler_NewRemoteComponentItem_Generic(const std::function<void(const char* component, int, uint64_t)> &lambda)
+{
+    m_Handlers_NewRemoteVehicle_Generic.push_back(lambda);
+}
+
+
+/**
+ * @brief Add handler to be called when a new vehicle has been removed from the network
+ * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
+ */
+void InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(const std::function<void(const char* component, int)> &lambda)
+{
+    m_Handlers_RemoteVehicleRemoved_Generic.push_back(lambda);
+}
+
+
+/**
+ * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
+ * @param lambda Lambda function to pass vehicle ID and status code
+ */
+void InteropComponent::AddHandler_ComponentItemTransmitError_Generic(const std::function<void(const char* component, int vehicle, TransmitStatusTypes status)> &lambda)
+{
+    m_Handlers_VehicleNotReached_Generic.push_back(lambda);
+}
+
+
 /**
  * @brief Send data to a component item
  * @param component Name of component to send to
@@ -88,6 +119,9 @@ void InteropComponent::SendData(const char* component, const int &destVehicleID,
             {
                 Notify<int, TransmitStatusTypes>(m_Handlers_VehicleNotReached.at(component), destVehicleID, status);
             }
+            else {
+                Notify<const char*, int, TransmitStatusTypes>(m_Handlers_VehicleNotReached_Generic, component, destVehicleID, status);
+            }
         }
     });
 }
@@ -102,6 +136,9 @@ void InteropComponent::onNewRemoteComponentItem(const char* name, int ID, uint64
         {
             Notify<int, uint64_t>(m_Handlers_NewRemoteVehicle.at(name), ID, addr);
         }
+        else {
+            Notify<const char*, int, uint64_t>(m_Handlers_NewRemoteVehicle_Generic, name, ID, addr);
+        }
     }
 }
 
@@ -111,6 +148,9 @@ void InteropComponent::onRemovedRemoteComponentItem(const char* name, int ID)
     if(m_Handlers_RemoteVehicleRemoved.find(name) != m_Handlers_RemoteVehicleRemoved.cend())
     {
         Notify<int>(m_Handlers_RemoteVehicleRemoved.at(name), ID);
+    }
+    else {
+        Notify<const char*, int>(m_Handlers_RemoteVehicleRemoved_Generic, name, ID);
     }
 }
 

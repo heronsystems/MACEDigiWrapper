@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
 
 
-    wrapper1->AddHandler_NewRemoteComponentItem<VEHICLE>([RADIO1](int num, uint64_t addr){
+    wrapper1->AddHandler_NewRemoteComponentItem_Generic([RADIO1](const char* component, int num, uint64_t addr){
         printf("%s\n New Remote Vehicle\n", RADIO1);
         printf("  Vehicle ID:    %d\n", num);
         printf("  DigiMesh Addr: %llx\n\n", addr);
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
 
 
-    wrapper2->AddHandler_NewRemoteComponentItem<VEHICLE>([RADIO2](int num, uint64_t addr){
+    wrapper2->AddHandler_NewRemoteComponentItem_Generic([RADIO2](const char* component, int num, uint64_t addr){
         printf("%s\n New Remote Vehicle\n", RADIO2);
         printf("  Vehicle ID:    %d\n", num);
         printf("  DigiMesh Addr: %llx\n\n", addr);
