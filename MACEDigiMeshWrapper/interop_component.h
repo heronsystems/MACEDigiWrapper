@@ -95,9 +95,9 @@ protected:
      * @param component Name of component to send to
      * @param destVechileID ID of item
      * @param data Data to send
-     * @throws std::runtime_error Thrown if no vehicle of given id is known.
+     * @return False if given ID/component doesn't exists
      */
-    void SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data);
+    bool SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data);
 
 protected:
 

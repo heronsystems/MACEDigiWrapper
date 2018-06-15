@@ -104,10 +104,15 @@ void InteropComponent::AddHandler_ComponentItemTransmitError_Generic(const std::
  * @param component Name of component to send to
  * @param destVechileID ID of item
  * @param data Data to send
- * @throws std::runtime_error Thrown if no vehicle of given id is known.
+ * @return False if given ID/component doesn't exists
  */
-void InteropComponent::SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data)
+bool InteropComponent::SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data)
 {
+    if(GetComponent(component)->HasAddr(destVehicleID) == false)
+    {
+        return false;
+    }
+
     //address to send to
     uint64_t addr = GetComponent(component)->GetAddr(destVehicleID);
 
@@ -124,6 +129,8 @@ void InteropComponent::SendData(const char* component, const int &destVehicleID,
             }
         }
     });
+
+    return true;
 }
 
 

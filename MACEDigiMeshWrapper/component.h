@@ -43,6 +43,15 @@ public:
         return m_VehicleIDToRadioAddr.at(ID);
     }
 
+    bool HasAddr(int ID)
+    {
+        if(m_VehicleIDToRadioAddr.find(ID) == m_VehicleIDToRadioAddr.cend())
+        {
+            return false;
+        }
+        return true;
+    }
+
     std::vector<int> ContainedIDs() const {
         return m_ContainedVehicles;
     }

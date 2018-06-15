@@ -122,9 +122,9 @@ public:
 
 
     template <const char* T>
-    void SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
+    bool SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
     {
-        InteropComponent::SendData(T, destVehicleID, data);
+        return InteropComponent::SendData(T, destVehicleID, data);
     }
 
 
@@ -173,9 +173,9 @@ public:
     }
 
 
-    void SendData(const char* str, const int &destVehicleID, const std::vector<uint8_t> &data)
+    bool SendData(const char* str, const int &destVehicleID, const std::vector<uint8_t> &data)
     {
-        InteropComponent::SendData(str, destVehicleID, data);
+        return InteropComponent::SendData(str, destVehicleID, data);
     }
 
 
