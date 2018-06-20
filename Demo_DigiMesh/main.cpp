@@ -7,6 +7,14 @@
 
 #include "frame-persistance/types/index.h"
 
+#ifdef _WINDOWS
+#include <windows.h>
+#else
+#include <unistd.h>
+#define Sleep(x) usleep((x)*1000)
+#endif
+
+
 int main(int argc, char *argv[])
 {
     std::cout << "Hello World!" << std::endl;
@@ -62,12 +70,13 @@ int main(int argc, char *argv[])
 
 
 
-    wrapper1.SetATParameterAsync<ATData::String>("NI", "1");
+    wrapper1.SetATParameterAsync<ATData::String>("NI", "AA");
     wrapper1.GetATParameterAsync<ATData::String>("NI", [RADIO1](const std::vector<ATData::String> &a){
         if(a.size() > 0) {
             printf("%s Ni: %s\n", RADIO1, a[0].c_str());
         }
     }, ShutdownFirstResponse());
+
 
 
 
@@ -79,9 +88,11 @@ int main(int argc, char *argv[])
     }, ShutdownFirstResponse());
 
 
+    Sleep(1000);
 
-    /*
-    wrapper2.GetATParameterAsync<ATData::NodeDiscovery>("ND", [](const std::vector<ATData::NodeDiscovery> &a){
+
+
+    wrapper1.GetATParameterAsync<ATData::NodeDiscovery>("ND", [](const std::vector<ATData::NodeDiscovery> &a){
         printf("Node Discovery done!\n");
         for(size_t i = 0 ; i < a.size() ; i++) {
             ATData::NodeDiscovery node = a.at(i);
@@ -94,8 +105,9 @@ int main(int argc, char *argv[])
             printf("  profile id:      0x%x\n", node.profile_id);
         }
     }, CollectAfterTimeout(15000));
-    */
 
+
+    Sleep(15000);
 
     //auto message = (ATData::String("Hi")).Serialize();
     //wrapper1.SendMessage(message);
