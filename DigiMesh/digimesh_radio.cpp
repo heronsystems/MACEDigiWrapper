@@ -124,8 +124,11 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
             case FRAME_RECEIVE_PACKET:
                 handle_receive_packet(packet);
                 break;
-            default:
-                throw std::runtime_error("unknown packet type received: " + std::to_string(packet[0]));
+            case FRAME_EXPLICIT_RECEIVE_PACKET:
+                handle_receive_packet(packet, true);
+                break;
+        default:
+            throw std::runtime_error("unknown packet type received: " + std::to_string(packet[0]));
         }
 
 
@@ -197,9 +200,9 @@ void DigiMeshRadio::handle_legacy_transmit_status(const std::vector<uint8_t> &da
 }
 
 
-void DigiMeshRadio::handle_receive_packet(const std::vector<uint8_t> &data)
+void DigiMeshRadio::handle_receive_packet(const std::vector<uint8_t> &data, const bool &explicitFrame)
 {
-    ATData::Message msg(data);
+    ATData::Message msg(data, explicitFrame);
 
     for(int i = 0 ; i < m_MessageHandlers.size() ; i++) {
         m_MessageHandlers.at(i)(msg);
