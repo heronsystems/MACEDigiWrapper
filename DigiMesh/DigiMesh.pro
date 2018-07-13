@@ -7,6 +7,8 @@
 QT += serialport
 QT       -= gui
 
+QMAKE_CXXFLAGS += -std=c++11
+
 TARGET = DigiMesh
 TEMPLATE = lib
 
