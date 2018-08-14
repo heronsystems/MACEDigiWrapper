@@ -31,9 +31,8 @@
 #define FRAME_TRANSMIT_REQUEST 0x10
 #define FRAME_TRANSMIT_STATUS 0x8b
 #define FRAME_RECEIVE_PACKET 0x90
-
+#define FRAME_EXPLICIT_RECEIVE_PACKET 0x91
 #define CALLBACK_QUEUE_SIZE 256
-
 
 class DIGIMESHSHARED_EXPORT DigiMeshRadio : public ILinkEvents
 {
@@ -286,7 +285,7 @@ private:
 
     void handle_legacy_transmit_status(const std::vector<uint8_t> &data);
 
-    void handle_receive_packet(const std::vector<uint8_t> &);
+    void handle_receive_packet(const std::vector<uint8_t> &, const bool &explicitFrame = false);
 
     int reserve_next_frame_id();
 

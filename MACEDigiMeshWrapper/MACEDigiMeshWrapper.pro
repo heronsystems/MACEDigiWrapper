@@ -6,6 +6,8 @@
 QT += serialport
 QT       -= gui
 
+QMAKE_CXXFLAGS += -std=c++11
+
 TARGET = MACEDigiMeshWrapper
 TEMPLATE = lib
 

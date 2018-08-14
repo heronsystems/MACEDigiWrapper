@@ -66,12 +66,12 @@ int main(int argc, char *argv[])
 
 
     wrapper1->AddHandler_Data([RADIO1](const std::vector<uint8_t> &data) {
-        printf("%s\n New Data Received. Size: %d\n\n", RADIO1, data.size());
+        printf("%s\n New Data Received\n  Size: %d\n", RADIO1, data.size());
     });
 
 
     wrapper2->AddHandler_Data([RADIO2](const std::vector<uint8_t> &data) {
-        printf("%s\n New Data Received. Size: %d\n\n", RADIO2, data.size());
+        printf("%s\n New Data Received\n  Size: %d\n", RADIO2, data.size());
     });
 
 
