@@ -190,6 +190,10 @@ private:
         {
             frame_id = reserve_next_frame_id();
         }
+        if(frame_id == -1)
+        {
+            throw std::runtime_error("Digimesh frame could not be established. Communication rate is likely too high for network to handle");
+        }
 
         tx_buf[0] = START_BYTE;
         tx_buf[1] = (packet_length >> 8) & 0xFF;
@@ -236,8 +240,9 @@ private:
     int AT_command_helper(const std::string &parameterName, const std::shared_ptr<FramePersistanceBehavior<>> &frameBehavior, const std::vector<uint8_t> &data = {})
     {
         int frame_id = reserve_next_frame_id();
-        if(frame_id == -1) {
-            throw std::runtime_error("Queue Full");
+        if(frame_id == -1)
+        {
+            throw std::runtime_error("Digimesh frame could not be established. Communication rate is likely too high for network to handle");
         }
 
         size_t param_len = data.size();

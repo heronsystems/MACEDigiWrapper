@@ -32,7 +32,8 @@ HEADERS +=\
     mace_digimesh_wrapper.h \
     component.h \
     interop_component.h \
-    interop.h
+    interop.h \
+    resource.h
 
 
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../DigiMesh/release/ -lDigiMesh

@@ -11,13 +11,15 @@ class InteropComponent : public Interop
 private:
 
 
-    std::map<std::string, std::vector<std::function<void(int, uint64_t)>>> m_Handlers_NewRemoteVehicle;
-    std::map<std::string, std::vector<std::function<void(int)>>> m_Handlers_RemoteVehicleRemoved;
-    std::map<std::string, std::vector<std::function<void(int, TransmitStatusTypes)>>> m_Handlers_VehicleNotReached;
+    std::map<ResourceKey, std::vector<std::function<void(ResourceValue, uint64_t)>>> m_Handlers_NewRemoteVehicle;
+    std::map<ResourceKey, std::vector<std::function<void(ResourceValue)>>> m_Handlers_RemoteVehicleRemoved;
+    std::map<ResourceKey, std::vector<std::function<void(ResourceValue, TransmitStatusTypes)>>> m_Handlers_VehicleNotReached;
 
-    std::vector<std::function<void(const char* componentName, int, uint64_t)>> m_Handlers_NewRemoteVehicle_Generic;
-    std::vector<std::function<void(const char* componentName, int)>> m_Handlers_RemoteVehicleRemoved_Generic;
-    std::vector<std::function<void(const char* componentName, int, TransmitStatusTypes)>> m_Handlers_VehicleNotReached_Generic;
+    std::vector<std::function<void(ResourceKey, ResourceValue resource, uint64_t)>> m_Handlers_NewRemoteVehicle_Generic;
+    std::vector<std::function<void(ResourceKey, ResourceValue resource)>> m_Handlers_RemoteVehicleRemoved_Generic;
+    std::vector<std::function<void(ResourceKey, ResourceValue resource, TransmitStatusTypes)>> m_Handlers_VehicleNotReached_Generic;
+
+    ResourceList m_Resources;
 
 
 public:
@@ -34,56 +36,58 @@ public:
 
 protected:
 
-    void AddComponentItem(const char* component, const int ID);
+    void AddResource(const ResourceKey &key, const ResourceValue &value);
+
+    bool HasResource(const ResourceKey &key, const ResourceValue &value) const;
 
 
-    void RemoveComponentItem(const char* component, const int ID);
-
-
-    /**
-     * @brief Add handler to be called when a new vehicle is added to the network
-     * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
-     */
-    void AddHandler_NewRemoteComponentItem(const char* component, const std::function<void(int, uint64_t)> &lambda);
-
-
-    /**
-     * @brief Add handler to be called when a new vehicle has been removed from the network
-     * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
-     */
-    void AddHandler_RemoteComponentItemRemoved(const char* component, const std::function<void(int)> &lambda);
-
-
-    /**
-     * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
-     * @param lambda Lambda function to pass vehicle ID and status code
-     */
-    void AddHandler_ComponentItemTransmitError(const char* component, const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda);
-
-
-
-
+    void RemoveResource(const ResourceKey &key, const ResourceValue &resource);
 
 
     /**
      * @brief Add handler to be called when a new vehicle is added to the network
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
      */
-    void AddHandler_NewRemoteComponentItem_Generic(const std::function<void(const char* component, int, uint64_t)> &lambda);
+    void AddHandler_NewRemoteComponentItem(const ResourceKey &key, const std::function<void(ResourceValue, uint64_t)> &lambda);
 
 
     /**
      * @brief Add handler to be called when a new vehicle has been removed from the network
      * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
      */
-    void AddHandler_RemoteComponentItemRemoved_Generic(const std::function<void(const char* component, int)> &lambda);
+    void AddHandler_RemoteComponentItemRemoved(const ResourceKey &key, const std::function<void(ResourceValue)> &lambda);
 
 
     /**
      * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
      * @param lambda Lambda function to pass vehicle ID and status code
      */
-    void AddHandler_ComponentItemTransmitError_Generic(const std::function<void(const char* component, int vehicle, TransmitStatusTypes status)> &lambda);
+    void AddHandler_ComponentItemTransmitError(const ResourceKey &key, const std::function<void(ResourceValue value, TransmitStatusTypes status)> &lambda);
+
+
+
+
+
+
+    /**
+     * @brief Add handler to be called when a new vehicle is added to the network
+     * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
+     */
+    void AddHandler_NewRemoteComponentItem_Generic(const std::function<void(ResourceKey, ResourceValue, uint64_t)> &lambda);
+
+
+    /**
+     * @brief Add handler to be called when a new vehicle has been removed from the network
+     * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
+     */
+    void AddHandler_RemoteComponentItemRemoved_Generic(const std::function<void(ResourceKey, ResourceValue)> &lambda);
+
+
+    /**
+     * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
+     * @param lambda Lambda function to pass vehicle ID and status code
+     */
+    void AddHandler_ComponentItemTransmitError_Generic(const std::function<void(ResourceKey, ResourceValue, TransmitStatusTypes)> &lambda);
 
 
 
@@ -97,22 +101,20 @@ protected:
      * @param data Data to send
      * @return False if given ID/component doesn't exists
      */
-    bool SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data);
+    bool SendData(const ResourceKey &key, const ResourceValue &resource, const std::vector<uint8_t> &data);
 
 protected:
 
 
-    virtual void onNewRemoteComponentItem(const char* name, int ID, uint64_t addr);
+    virtual void onNewRemoteComponentItem(const ResourceKey &key, const ResourceValue &resource, uint64_t addr);
 
-    virtual void onRemovedRemoteComponentItem(const char* name, int ID);
+    virtual void onRemovedRemoteComponentItem(const ResourceKey &resourceKey, const ResourceValue &resourceValue);
 
-    virtual std::vector<int> RetrieveComponentItems(const char* name);
+    virtual std::vector<std::tuple<ResourceKey, ResourceValue> > RetrieveComponentItems(const ResourceKey &key, bool internal = false);
 
 
 protected:
 
-
-    virtual Component* GetComponent(const char*) = 0;
 
 };
 

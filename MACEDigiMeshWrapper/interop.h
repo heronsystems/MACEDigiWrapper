@@ -7,8 +7,14 @@
 
 #include "digi_mesh_baud_rates.h"
 #include "transmit_status_types.h"
+#include "resource.h"
 
 #include "macewrapper_global.h"
+
+
+
+
+
 
 /**
  * @brief The Interop class
@@ -86,15 +92,15 @@ protected:
 
     void SendDataToAddress(uint64_t addr, const std::vector<uint8_t> &data, const std::function<void(const TransmitStatusTypes &)> &cb);
 
-    void RequestContainedVehicles(const char* component);
+    void RequestContainedResources(const ResourceKey &key) const;
 
 protected:
 
-    virtual void onNewRemoteComponentItem(const char* name, int ID, uint64_t addr) = 0;
+    virtual void onNewRemoteComponentItem(const ResourceKey &key, const ResourceValue &resource, uint64_t addr) = 0;
 
-    virtual void onRemovedRemoteComponentItem(const char* name, int ID) = 0;
+    virtual void onRemovedRemoteComponentItem(const ResourceKey &key, const ResourceValue &resource) = 0;
 
-    virtual std::vector<int> RetrieveComponentItems(const char* name) = 0;
+    virtual std::vector<std::tuple<ResourceKey, ResourceValue>> RetrieveComponentItems(const ResourceKey &key, bool internal = false) = 0;
 
 protected:
 
@@ -105,9 +111,9 @@ protected:
     void on_message_received(const std::vector<uint8_t> &msg, uint64_t addr);
 
 
-    void send_item_present_message(const char *componentName, const int vehicleID);
+    void send_item_present_message(const ResourceKey &key, const ResourceValue &resource);
 
-    void send_item_remove_message(const char *componentName, const int vehicleID);
+    void send_item_remove_message(const ResourceKey &key, const ResourceValue &resource);
 
 };
 

@@ -77,6 +77,15 @@ void SerialLink::WriteBytes(const char *bytes, int length)
 {
     if(m_port && m_port->isOpen()) {
         //_logOutputDataRate(data.size(), QDateTime::currentMSecsSinceEpoch());
+
+        /*
+        printf("Packet:\n");
+        for(int i = 0 ; i < length ; i++)
+        {
+            printf("%x\n", bytes[i]);
+        }
+        printf("/Packet\n");
+        */
         m_port->write(bytes, length);
     } else {
         // Error occured

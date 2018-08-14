@@ -28,7 +28,7 @@ private:
             addr |= (((uint64_t)msg[1+i]) << (8*(7-i)));
         }
 
-        broadcast = msg[11] == 0x02;
+        broadcast = (msg[11]& 0x03) == 0x02;
 
 
         for(size_t i = 12 ; i < msg.size() ; i++) {

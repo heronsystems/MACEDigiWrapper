@@ -67,19 +67,23 @@ void Interop::BroadcastData(const std::vector<uint8_t> &data)
 }
 
 
-void Interop::RequestContainedVehicles(const char *component)
+void Interop::RequestContainedResources(const ResourceKey &key) const
 {
     std::vector<uint8_t> packet;
     packet.push_back((uint8_t)PacketTypes::CONTAINED_VECHILES_REQUEST);
 
-    size_t pos = 0;
-    do
+    for(auto it = key.cbegin() ; it != key.cend() ; ++it)
     {
-        packet.push_back(component[pos]);
-        pos++;
+        std::string name = *it;
+        size_t pos = 0;
+        do
+        {
+            packet.push_back(name[pos]);
+            pos++;
+        }
+        while(name[pos] != '\0');
+        packet.push_back('\0');
     }
-    while(component[pos] != '\0');
-    packet.push_back('\0');
 
     ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
@@ -123,50 +127,86 @@ void Interop::on_message_received(const std::vector<uint8_t> &msg, uint64_t addr
         }
         case PacketTypes::COMPONENT_ITEM_PRESENT:
         {
-            std::string element;
+            ResourceKey key;
+            ResourceValue value;
+
             int pos = 1;
-            while(msg[pos] != '\0') {
-                element += msg[pos];
+
+            //iterate over message pulling every component/value
+            while(pos < msg.size())
+            {
+                std::string element = "";
+                while(msg[pos] != '\0') {
+                    element += msg[pos];
+                    pos++;
+                }
+                int ID = 0;
                 pos++;
+                for(int i = 0 ; i < 4 ; i++) {
+                    ID |= (((uint64_t)msg[pos+i]) << (8*(3-i)));
+                }
+                pos += 4;
+
+                key.AddNameToResourceKey(element.c_str());
+                value.AddValueToResourceKey(ID);
             }
-            int vehicleID = 0;
-            for(int i = 0 ; i < 4 ; i++) {
-                vehicleID |= (((uint64_t)msg[pos+1+i]) << (8*(3-i)));
-            }
-            onNewRemoteComponentItem(element.c_str(), vehicleID, addr);
+
+            onNewRemoteComponentItem(key, value, addr);
             break;
         }
         case PacketTypes::CONTAINED_VECHILES_REQUEST:
         {
-            std::string element;
+            ResourceKey key;
             int pos = 1;
-            while(msg[pos] != '\0') {
-                element += msg[pos];
+
+            //iterate over message pulling every component/value
+            while(pos < msg.size())
+            {
+                std::string element = "";
+                while(msg[pos] != '\0') {
+                    element += msg[pos];
+                    pos++;
+                }
                 pos++;
+
+                key.AddNameToResourceKey(element.c_str());
             }
 
-            std::vector<int> contained = RetrieveComponentItems(element.c_str());
+            std::vector<std::tuple<ResourceKey, ResourceValue>> contained = RetrieveComponentItems(key, true);
 
             for(auto it = contained.cbegin() ; it != contained.cend() ; ++it) {
-                send_item_present_message(element.c_str(), *it);
+                send_item_present_message(std::get<0>(*it), std::get<1>(*it));
             }
             break;
         }
         case PacketTypes::REMOVE_COMPONENT_ITEM:
         {
-            std::string componentName;
+            ResourceKey key;
+            ResourceValue value;
+
             int pos = 1;
-            while(msg[pos] != '\0') {
-                componentName += msg[pos];
-                pos++;
+
+            //iterate over message pulling every component/value
+            while(pos <= msg.size())
+            {
+                std::string element = "";
+                int pos = 1;
+                while(msg[pos] != '\0') {
+                    element += msg[pos];
+                    pos++;
+                }
+                int ID = 0;
+                for(int i = 0 ; i < 4 ; i++) {
+                    ID |= (((uint64_t)msg[pos+1+i]) << (8*(3-i)));
+                }
+                pos += 4;
+
+                key.AddNameToResourceKey(element.c_str());
+                value.AddValueToResourceKey(ID);
             }
 
-            int vehicleID = 0;
-            for(int i = 0 ; i < 4 ; i++) {
-                vehicleID |= (((uint64_t)msg[pos+1+i]) << (8*(3-i)));
-            }
-            onRemovedRemoteComponentItem(componentName.c_str(), vehicleID);
-            break;\
+            onRemovedRemoteComponentItem(key, value);
+            break;
         }
         default:
             throw std::runtime_error("Unknown packet type received over digimesh network");
@@ -174,45 +214,70 @@ void Interop::on_message_received(const std::vector<uint8_t> &msg, uint64_t addr
 }
 
 
-void Interop::send_item_present_message(const char *componentName, const int vehicleID)
+void Interop::send_item_present_message(const ResourceKey &key, const ResourceValue &resource)
 {
+    if(key.size() != resource.size())
+    {
+        throw std::runtime_error("given resource key and resource value don't match in size!");
+    }
+
+
     std::vector<uint8_t> packet;
     packet.push_back((uint8_t)PacketTypes::COMPONENT_ITEM_PRESENT);
 
-    size_t pos = 0;
-    do
-    {
-        packet.push_back(componentName[pos]);
-        pos++;
-    }
-    while(componentName[pos] != '\0');
-    packet.push_back('\0');
+    for(int i = 0 ; i < key.size() ; i++) {
 
-    for(size_t i = 0 ; i < 4 ; i++) {
-        uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
-        packet.push_back((char)a);
+        std::string componentName = key.at(i);
+        int ID = resource.at(i);
+
+        size_t pos = 0;
+        do
+        {
+            packet.push_back(componentName[pos]);
+            pos++;
+        }
+        while(componentName[pos] != '\0');
+        packet.push_back('\0');
+
+        for(size_t i = 0 ; i < 4 ; i++) {
+            uint64_t a = (ID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
+            packet.push_back((char)a);
+        }
     }
     ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }
 
 
-void Interop::send_item_remove_message(const char *componentName, const int vehicleID)
+void Interop::send_item_remove_message(const ResourceKey &key, const ResourceValue &resource)
 {
     std::vector<uint8_t> packet;
     packet.push_back((uint8_t)PacketTypes::REMOVE_COMPONENT_ITEM);
 
-    size_t pos = 0;
-    do
+    if(key.size() != resource.size())
     {
-        packet.push_back(componentName[pos]);
-        pos++;
+        throw std::runtime_error("given resource key and resource value don't match in size!");
     }
-    while(componentName[pos] != '\0');
-    packet.push_back('\0');
 
-    for(size_t i = 0 ; i < 4 ; i++) {
-        uint64_t a = (vehicleID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
-        packet.push_back((char)a);
+    for(int i = 0 ; i < key.size() ; i++) {
+
+        std::string componentName = key.at(i);
+        int ID = resource.at(i);
+
+        size_t pos = 0;
+        do
+        {
+            packet.push_back(componentName[pos]);
+            pos++;
+        }
+        while(componentName[pos] != '\0');
+        packet.push_back('\0');
+
+        for(size_t i = 0 ; i < 4 ; i++) {
+            uint64_t a = (ID & (0xFFll << (8*(3-i)))) >> (8*(3-i));
+            packet.push_back((char)a);
+        }
+
     }
+
     ((DigiMeshRadio*)m_Radio)->SendMessage(packet);
 }

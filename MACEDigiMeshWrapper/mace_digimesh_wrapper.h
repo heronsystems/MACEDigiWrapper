@@ -41,6 +41,7 @@ public:
 
 };
 
+
 template <>
 class MACEWRAPPERSHARED_EXPORT _MACEDigiMeshWrapper<>
 {
@@ -57,7 +58,7 @@ public:
 template <const char*... A>
 class MACEWRAPPERSHARED_EXPORT MACEDigiMeshWrapper : public InteropComponent, public _MACEDigiMeshWrapper<A...>
 {
-    using _MACEDigiMeshWrapper<A...>::m_ElementMap;
+    //using _MACEDigiMeshWrapper<A...>::m_ElementMap;
 
 public:
 
@@ -69,23 +70,21 @@ public:
         //broadcast a request for everyone to send their Elements
         variadicExpand<A...>([this](const char* element) {
 
-            InteropComponent::RequestContainedVehicles(element);
+            InteropComponent::RequestContainedResources({element});
         });
 
     }
 
 
-    template <const char* T>
-    void AddComponentItem(const int ID)
+    void RequestRemoteResources() const
     {
-        InteropComponent::AddComponentItem(T, ID);
+        variadicExpand<A...>([this](const char* element) {
+
+            InteropComponent::RequestContainedResources({element});
+        });
+
     }
 
-    template <const char* T>
-    void RemoveComponentItem(const int ID)
-    {
-        InteropComponent::RemoveComponentItem(T, ID);
-    }
 
 
     /**
@@ -121,33 +120,52 @@ public:
     }
 
 
-    template <const char* T>
-    bool SendData(const int &destVehicleID, const std::vector<uint8_t> &data)
+    void AddResource(const ResourceKey &key, const ResourceValue &value) // recursive variadic function
     {
-        return InteropComponent::SendData(T, destVehicleID, data);
+        InteropComponent::AddResource(key, value);
     }
 
 
-
-
-
-
-    void AddComponentItem(const char* str, const int ID)
+    template<const char* ...str, typename... Args>
+    void AddResource(Args... args) // recursive variadic function
     {
-        InteropComponent::AddComponentItem(str, ID);
+        static_assert(sizeof...(str) == sizeof...(Args), "Name and Resource values must be the same");
+
+
+
+        std::vector<int> vec = _BuildIntVector(args...) ;
+        std::vector<std::string> names = {str...};
+
+        InteropComponent::AddResource(ResourceKey(names), ResourceValue(vec));
     }
 
-    void RemoveComponentItem(const char* str, const int ID)
+
+    bool HasResource(const ResourceKey &key, const ResourceValue &value) // recursive variadic function
     {
-        InteropComponent::RemoveComponentItem(str, ID);
+        return InteropComponent::HasResource(key, value);
     }
 
+
+    bool SendData(const std::vector<uint8_t> &data, const ResourceKey &key, const ResourceValue &value) // recursive variadic function
+    {
+        return InteropComponent::SendData(key, value, data);
+    }
+
+    template<const char* ...str, typename... Args>
+    bool SendData(const std::vector<uint8_t> &data, Args... args) // recursive variadic function
+    {
+        static_assert(sizeof...(str) == sizeof...(Args), "Name and Resource values must be the same");
+
+        std::vector<int> vec = _BuildIntVector(args...) ;
+        std::vector<std::string> names = {str...};
+        return InteropComponent::SendData(ResourceKey(names), ResourceValue(vec), data);
+    }
 
     /**
      * @brief Add handler to be called when a new vehicle is added to the network
      * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
      */
-    void AddHandler_NewRemoteComponentItem_Generic(const std::function<void(const char* componentName, int, uint64_t)> &lambda)
+    void AddHandler_NewRemoteComponentItem_Generic(const std::function<void(ResourceKey, ResourceValue, uint64_t)> &lambda)
     {
         InteropComponent::AddHandler_NewRemoteComponentItem_Generic(lambda);
     }
@@ -157,7 +175,7 @@ public:
      * @brief Add handler to be called when a new vehicle has been removed from the network
      * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
      */
-    void AddHandler_RemovedRemoteComponentItem_Generic(const std::function<void(const char* componentName, int)> &lambda)
+    void AddHandler_RemovedRemoteComponentItem_Generic(const std::function<void(ResourceKey, ResourceValue)> &lambda)
     {
         InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(lambda);
     }
@@ -167,23 +185,26 @@ public:
      * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
      * @param lambda Lambda function to pass vehicle ID and status code
      */
-    void AddHandler_ComponentItemTransmitError_Generic(const std::function<void(const char* componentName, int vehicle, TransmitStatusTypes status)> &lambda)
+    void AddHandler_ComponentItemTransmitError_Generic(const std::function<void(ResourceKey, ResourceValue, TransmitStatusTypes status)> &lambda)
     {
         InteropComponent::AddHandler_ComponentItemTransmitError_Generic(lambda);
     }
 
-
-    bool SendData(const char* str, const int &destVehicleID, const std::vector<uint8_t> &data)
-    {
-        return InteropComponent::SendData(str, destVehicleID, data);
-    }
-
-
 private:
 
-    virtual Component* GetComponent(const char* name)
+
+    template <typename T>
+    std::vector<int> _BuildIntVector(T t)
     {
-        return m_ElementMap[name];
+        return {t};
+    }
+
+    template<typename T, typename... Args>
+    std::vector<int> _BuildIntVector(T t, Args... args) // recursive variadic function
+    {
+        std::vector<int> vec = _BuildIntVector(args...);
+        vec.insert(vec.begin(), t);
+        return vec;
     }
 };
 

@@ -90,7 +90,7 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
 
 
         // add 4 bytes for start, length, and checksum
-        uint8_t packet_length = (m_CurrBuf[1]<<8 |m_CurrBuf[2]) + 4;
+        uint16_t packet_length = (((uint16_t)m_CurrBuf[1])<<8 | (uint16_t)m_CurrBuf[2]) + 4;
 
         //if we have received part of the packet, but not entire thing then we need to wait longer
         if(m_CurrBuf.size() < packet_length) {
@@ -102,9 +102,36 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
         std::vector<uint8_t> packet(
             std::make_move_iterator(m_CurrBuf.begin() + 3),
             std::make_move_iterator(m_CurrBuf.begin() + packet_length - 1));
+        uint8_t checksum = m_CurrBuf.at(packet_length -1);
+
+        /*
+        if(packet[0] == LEGACY_TX_STATUS)
+        {
+            for(int i = 0 ; i < m_CurrBuf.size() ; i++)
+            {
+                printf("%x\n", m_CurrBuf.at(i));
+            }
+            printf("Dumped\n");
+        }
+        */
+
         m_CurrBuf.erase(m_CurrBuf.begin(), m_CurrBuf.begin() + packet_length);
 
+
+
         m_CurrBuffMutex.unlock();
+
+        //check the checksum
+        uint8_t dataCheck = checksum;
+        for(auto it = packet.cbegin() ; it != packet.cend() ; ++it)
+        {
+            dataCheck += *it;
+        }
+        if(dataCheck != 0xFF)
+        {
+            printf("Digimesh Checksum Failed! Ignoring packet.\n");
+            continue;
+        }
 
         switch(packet[0])
         {
@@ -120,7 +147,7 @@ void DigiMeshRadio::ReceiveData(SerialLink *link_ptr, const std::vector<uint8_t>
                 break;
             case LEGACY_TX_STATUS:
                 handle_legacy_transmit_status(packet);
-            break;
+                break;
             case FRAME_RECEIVE_PACKET:
                 handle_receive_packet(packet);
                 break;
@@ -185,6 +212,12 @@ void DigiMeshRadio::handle_transmit_status(const std::vector<uint8_t> &data)
 {
     uint8_t frame_id = data[1];
     find_and_invokve_frame(frame_id, data);
+
+    if(data[5] == 0x74)
+    {
+        printf(" PAYLOAD TOO LARGE !!!!\n");
+        throw std::runtime_error("Transmit error, Payload too large");
+    }
 }
 
 void DigiMeshRadio::handle_legacy_transmit_status(const std::vector<uint8_t> &data)

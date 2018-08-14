@@ -15,17 +15,22 @@ InteropComponent::InteropComponent(const std::string &port, DigiMeshBaudRates ra
 
 }
 
-void InteropComponent::AddComponentItem(const char* component, const int ID)
+void InteropComponent::AddResource(const ResourceKey &key, const ResourceValue &value)
 {
-    GetComponent(component)->AddInternalItem(ID);
-    send_item_present_message(component, ID);
+    m_Resources.AddInternalResource(key, value);
+    send_item_present_message(key, value);
+}
+
+bool InteropComponent::HasResource(const ResourceKey &key, const ResourceValue &value) const
+{
+    return m_Resources.HasAddr(key, value);
 }
 
 
-void InteropComponent::RemoveComponentItem(const char* component, const int ID)
+void InteropComponent::RemoveResource(const ResourceKey &key, const ResourceValue &value)
 {
-    GetComponent(component)->RemoveInternalItem(ID);
-    send_item_remove_message(component, ID);
+    m_Resources.RemoveInternalResource(key, value);
+    send_item_remove_message(key, value);
 }
 
 
@@ -33,12 +38,12 @@ void InteropComponent::RemoveComponentItem(const char* component, const int ID)
  * @brief Add handler to be called when a new vehicle is added to the network
  * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
  */
-void InteropComponent::AddHandler_NewRemoteComponentItem(const char* component, const std::function<void(int, uint64_t)> &lambda)
+void InteropComponent::AddHandler_NewRemoteComponentItem(const ResourceKey &key, const std::function<void(ResourceValue, uint64_t)> &lambda)
 {
-    if(m_Handlers_NewRemoteVehicle.find(component) == m_Handlers_NewRemoteVehicle.cend()) {
-        m_Handlers_NewRemoteVehicle.insert({component, {}});
+    if(m_Handlers_NewRemoteVehicle.find(key) == m_Handlers_NewRemoteVehicle.cend()) {
+        m_Handlers_NewRemoteVehicle.insert({key, {}});
     }
-    m_Handlers_NewRemoteVehicle.at(component).push_back(lambda);
+    m_Handlers_NewRemoteVehicle.at(key).push_back(lambda);
 }
 
 
@@ -46,12 +51,12 @@ void InteropComponent::AddHandler_NewRemoteComponentItem(const char* component, 
  * @brief Add handler to be called when a new vehicle has been removed from the network
  * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
  */
-void InteropComponent::AddHandler_RemoteComponentItemRemoved(const char* component, const std::function<void(int)> &lambda)
+void InteropComponent::AddHandler_RemoteComponentItemRemoved(const ResourceKey &key, const std::function<void(ResourceValue)> &lambda)
 {
-    if(m_Handlers_RemoteVehicleRemoved.find(component) == m_Handlers_RemoteVehicleRemoved.cend()) {
-        m_Handlers_RemoteVehicleRemoved.insert({component, {}});
+    if(m_Handlers_RemoteVehicleRemoved.find(key) == m_Handlers_RemoteVehicleRemoved.cend()) {
+        m_Handlers_RemoteVehicleRemoved.insert({key, {}});
     }
-    m_Handlers_RemoteVehicleRemoved.at(component).push_back(lambda);
+    m_Handlers_RemoteVehicleRemoved.at(key).push_back(lambda);
 }
 
 
@@ -59,12 +64,12 @@ void InteropComponent::AddHandler_RemoteComponentItemRemoved(const char* compone
  * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
  * @param lambda Lambda function to pass vehicle ID and status code
  */
-void InteropComponent::AddHandler_ComponentItemTransmitError(const char* component, const std::function<void(int vehicle, TransmitStatusTypes status)> &lambda)
+void InteropComponent::AddHandler_ComponentItemTransmitError(const ResourceKey &key, const std::function<void(ResourceValue vehicle, TransmitStatusTypes status)> &lambda)
 {
-    if(m_Handlers_VehicleNotReached.find(component) == m_Handlers_VehicleNotReached.cend()) {
-        m_Handlers_VehicleNotReached.insert({component, {}});
+    if(m_Handlers_VehicleNotReached.find(key) == m_Handlers_VehicleNotReached.cend()) {
+        m_Handlers_VehicleNotReached.insert({key, {}});
     }
-    m_Handlers_VehicleNotReached.at(component).push_back(lambda);
+    m_Handlers_VehicleNotReached.at(key).push_back(lambda);
 }
 
 
@@ -73,7 +78,7 @@ void InteropComponent::AddHandler_ComponentItemTransmitError(const char* compone
  * @brief Add handler to be called when a new vehicle is added to the network
  * @param lambda Lambda function whoose parameters are the vehicle ID and node address of new vechile.
  */
-void InteropComponent::AddHandler_NewRemoteComponentItem_Generic(const std::function<void(const char* component, int, uint64_t)> &lambda)
+void InteropComponent::AddHandler_NewRemoteComponentItem_Generic(const std::function<void(ResourceKey, ResourceValue, uint64_t)> &lambda)
 {
     m_Handlers_NewRemoteVehicle_Generic.push_back(lambda);
 }
@@ -83,7 +88,7 @@ void InteropComponent::AddHandler_NewRemoteComponentItem_Generic(const std::func
  * @brief Add handler to be called when a new vehicle has been removed from the network
  * @param lambda Lambda function whoose parameters are the vehicle ID of removed vechile.
  */
-void InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(const std::function<void(const char* component, int)> &lambda)
+void InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(const std::function<void(ResourceKey, ResourceValue)> &lambda)
 {
     m_Handlers_RemoteVehicleRemoved_Generic.push_back(lambda);
 }
@@ -93,7 +98,7 @@ void InteropComponent::AddHandler_RemoteComponentItemRemoved_Generic(const std::
  * @brief Add handler to be called when tranmission to a vehicle failed for some reason.
  * @param lambda Lambda function to pass vehicle ID and status code
  */
-void InteropComponent::AddHandler_ComponentItemTransmitError_Generic(const std::function<void(const char* component, int vehicle, TransmitStatusTypes status)> &lambda)
+void InteropComponent::AddHandler_ComponentItemTransmitError_Generic(const std::function<void(ResourceKey, ResourceValue, TransmitStatusTypes)> &lambda)
 {
     m_Handlers_VehicleNotReached_Generic.push_back(lambda);
 }
@@ -106,26 +111,38 @@ void InteropComponent::AddHandler_ComponentItemTransmitError_Generic(const std::
  * @param data Data to send
  * @return False if given ID/component doesn't exists
  */
-bool InteropComponent::SendData(const char* component, const int &destVehicleID, const std::vector<uint8_t> &data)
+bool InteropComponent::SendData(const ResourceKey &resourceKey, const ResourceValue &resourceValue, const std::vector<uint8_t> &data)
 {
-    if(GetComponent(component)->HasAddr(destVehicleID) == false)
+    if(m_Resources.HasAddr(resourceKey, resourceValue) == false)
     {
-        return false;
+        std::string str = "[ ";
+        for(int i = 0 ; i < resourceKey.size() ; i++)
+        {
+            str += resourceKey.at(i) + " ";
+        }
+        str += "] { ";
+        for(int i = 0 ; i < resourceValue.size() ; i++)
+        {
+            str += std::to_string(resourceValue.at(i)) + " ";
+        }
+        str += "}";
+
+        throw std::runtime_error("No address known for given target: " + str);
     }
 
     //address to send to
-    uint64_t addr = GetComponent(component)->GetAddr(destVehicleID);
+    uint64_t addr = m_Resources.GetAddr(resourceKey, resourceValue);
 
-    SendDataToAddress(addr, data, [this, destVehicleID, component](const TransmitStatusTypes &status){
+    SendDataToAddress(addr, data, [this, resourceKey, resourceValue](const TransmitStatusTypes &status){
 
         if(status != TransmitStatusTypes::SUCCESS)
         {
-            if(m_Handlers_VehicleNotReached.find(component) != m_Handlers_VehicleNotReached.cend())
+            if(m_Handlers_VehicleNotReached.find(resourceKey) != m_Handlers_VehicleNotReached.cend())
             {
-                Notify<int, TransmitStatusTypes>(m_Handlers_VehicleNotReached.at(component), destVehicleID, status);
+                Notify<ResourceValue, TransmitStatusTypes>(m_Handlers_VehicleNotReached.at(resourceKey), resourceValue, status);
             }
             else {
-                Notify<const char*, int, TransmitStatusTypes>(m_Handlers_VehicleNotReached_Generic, component, destVehicleID, status);
+                Notify<ResourceKey, ResourceValue, TransmitStatusTypes>(m_Handlers_VehicleNotReached_Generic, resourceKey, resourceValue, status);
             }
         }
     });
@@ -135,33 +152,40 @@ bool InteropComponent::SendData(const char* component, const int &destVehicleID,
 
 
 
-void InteropComponent::onNewRemoteComponentItem(const char* name, int ID, uint64_t addr)
+void InteropComponent::onNewRemoteComponentItem(const ResourceKey &resourceKey, const ResourceValue &resourceValue, uint64_t addr)
 {
-    if(GetComponent(name)->AddExternalItem(ID, addr) == true)
-    {
-        if(m_Handlers_NewRemoteVehicle.find(name) != m_Handlers_NewRemoteVehicle.cend())
-        {
-            Notify<int, uint64_t>(m_Handlers_NewRemoteVehicle.at(name), ID, addr);
-        }
-        else {
-            Notify<const char*, int, uint64_t>(m_Handlers_NewRemoteVehicle_Generic, name, ID, addr);
-        }
-    }
-}
+    bool newResource = m_Resources.AddExternalResource(resourceKey, resourceValue, addr);
 
-void InteropComponent::onRemovedRemoteComponentItem(const char* name, int ID)
-{
-    GetComponent(name)->RemoveExternalItem(ID);
-    if(m_Handlers_RemoteVehicleRemoved.find(name) != m_Handlers_RemoteVehicleRemoved.cend())
+    //if not a new resource, then we are done.
+    if(newResource == false)
     {
-        Notify<int>(m_Handlers_RemoteVehicleRemoved.at(name), ID);
+        return;
+    }
+
+    if(m_Handlers_NewRemoteVehicle.find(resourceKey) != m_Handlers_NewRemoteVehicle.cend())
+    {
+        Notify<ResourceValue, uint64_t>(m_Handlers_NewRemoteVehicle.at(resourceKey), resourceValue, addr);
     }
     else {
-        Notify<const char*, int>(m_Handlers_RemoteVehicleRemoved_Generic, name, ID);
+        Notify<ResourceKey, ResourceValue, uint64_t>(m_Handlers_NewRemoteVehicle_Generic, resourceKey, resourceValue, addr);
     }
 }
 
-std::vector<int> InteropComponent::RetrieveComponentItems(const char* name)
+void InteropComponent::onRemovedRemoteComponentItem(const ResourceKey &resourceKey, const ResourceValue &resourceValue)
 {
-    return GetComponent(name)->ContainedIDs();
+    m_Resources.RemoveExternalResource(resourceKey, resourceValue);
+
+    if(m_Handlers_RemoteVehicleRemoved.find(resourceKey) != m_Handlers_RemoteVehicleRemoved.cend())
+    {
+        Notify<ResourceValue>(m_Handlers_RemoteVehicleRemoved.at(resourceKey), resourceValue);
+    }
+    else {
+        Notify<ResourceKey, ResourceValue>(m_Handlers_RemoteVehicleRemoved_Generic, resourceKey, resourceValue);
+    }
+}
+
+
+std::vector<std::tuple<ResourceKey, ResourceValue>> InteropComponent::RetrieveComponentItems(const ResourceKey &key, bool internal)
+{
+    return m_Resources.getResourcesMatch(key, true, internal);
 }
