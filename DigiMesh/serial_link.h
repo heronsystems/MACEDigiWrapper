@@ -12,6 +12,8 @@
 #include <QSerialPort>
 #include <QThread>
 
+#include <functional>
+
 #include "serial_configuration.h"
 
 #include "i_link_events.h"
